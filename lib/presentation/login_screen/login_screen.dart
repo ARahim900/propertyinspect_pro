@@ -3,6 +3,11 @@ import 'package:flutter/services.dart';
 import 'package:sizer/sizer.dart';
 
 import '../../core/app_export.dart';
+import '../../mixins/validation_mixin.dart';
+import '../../utils/validation_helper.dart';
+import '../../services/error_service.dart';
+import '../../services/performance_service.dart';
+import '../../services/crash_reporting_service.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -11,7 +16,7 @@ class LoginScreen extends StatefulWidget {
   State<LoginScreen> createState() => _LoginScreenState();
 }
 
-class _LoginScreenState extends State<LoginScreen> {
+class _LoginScreenState extends State<LoginScreen> with ValidationMixin {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
@@ -178,31 +183,26 @@ class _LoginScreenState extends State<LoginScreen> {
           ),
         ),
         SizedBox(height: 1.h),
-        TextFormField(
+        buildValidatedTextField(
+          fieldName: 'email',
           controller: _emailController,
+          labelText: '',
+          validators: [
+            (value) => ValidationHelper.validateRequired(value, 'Email'),
+            (value) => ValidationHelper.isValidEmail(value ?? '') ? null : 'Please enter a valid email address',
+          ],
           keyboardType: TextInputType.emailAddress,
-          textInputAction: TextInputAction.next,
           enabled: !_isLoading,
-          decoration: InputDecoration(
-            hintText: 'Enter your email address',
-            prefixIcon: Padding(
-              padding: EdgeInsets.all(3.w),
-              child: CustomIconWidget(
-                iconName: 'email',
-                color: AppTheme.lightTheme.colorScheme.onSurface
-                    .withValues(alpha: 0.6),
-                size: 5.w,
-              ),
+          hintText: 'Enter your email address',
+          prefixIcon: Padding(
+            padding: EdgeInsets.all(3.w),
+            child: CustomIconWidget(
+              iconName: 'email',
+              color: AppTheme.lightTheme.colorScheme.onSurface
+                  .withValues(alpha: 0.6),
+              size: 5.w,
             ),
-            errorText: _emailError,
-            errorMaxLines: 2,
           ),
-          onChanged: (value) {
-            if (_emailError != null) {
-              setState(() => _emailError = null);
-            }
-          },
-          validator: _validateEmail,
         ),
       ],
     );
@@ -220,45 +220,39 @@ class _LoginScreenState extends State<LoginScreen> {
           ),
         ),
         SizedBox(height: 1.h),
-        TextFormField(
+        buildValidatedTextField(
+          fieldName: 'password',
           controller: _passwordController,
+          labelText: '',
+          validators: [
+            (value) => ValidationHelper.validateRequired(value, 'Password'),
+            (value) => ValidationHelper.validateLength(value, 'Password', minLength: 6),
+          ],
           obscureText: !_isPasswordVisible,
-          textInputAction: TextInputAction.done,
           enabled: !_isLoading,
-          decoration: InputDecoration(
-            hintText: 'Enter your password',
-            prefixIcon: Padding(
-              padding: EdgeInsets.all(3.w),
-              child: CustomIconWidget(
-                iconName: 'lock',
-                color: AppTheme.lightTheme.colorScheme.onSurface
-                    .withValues(alpha: 0.6),
-                size: 5.w,
-              ),
+          hintText: 'Enter your password',
+          prefixIcon: Padding(
+            padding: EdgeInsets.all(3.w),
+            child: CustomIconWidget(
+              iconName: 'lock',
+              color: AppTheme.lightTheme.colorScheme.onSurface
+                  .withValues(alpha: 0.6),
+              size: 5.w,
             ),
-            suffixIcon: IconButton(
-              onPressed: _isLoading
-                  ? null
-                  : () {
-                      setState(() => _isPasswordVisible = !_isPasswordVisible);
-                    },
-              icon: CustomIconWidget(
-                iconName: _isPasswordVisible ? 'visibility_off' : 'visibility',
-                color: AppTheme.lightTheme.colorScheme.onSurface
-                    .withValues(alpha: 0.6),
-                size: 5.w,
-              ),
-            ),
-            errorText: _passwordError,
-            errorMaxLines: 2,
           ),
-          onChanged: (value) {
-            if (_passwordError != null) {
-              setState(() => _passwordError = null);
-            }
-          },
-          onFieldSubmitted: (_) => _handleSignIn(),
-          validator: _validatePassword,
+          suffixIcon: IconButton(
+            onPressed: _isLoading
+                ? null
+                : () {
+                    setState(() => _isPasswordVisible = !_isPasswordVisible);
+                  },
+            icon: CustomIconWidget(
+              iconName: _isPasswordVisible ? 'visibility_off' : 'visibility',
+              color: AppTheme.lightTheme.colorScheme.onSurface
+                  .withValues(alpha: 0.6),
+              size: 5.w,
+            ),
+          ),
         ),
       ],
     );
@@ -507,11 +501,33 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Future<void> _handleSignIn() async {
-    if (!_formKey.currentState!.validate()) {
+    PerformanceService.instance.startOperation('user_login');
+    
+    // Validate form using ValidationMixin
+    final formData = {
+      'email': _emailController.text,
+      'password': _passwordController.text,
+    };
+    
+    final fieldValidators = {
+      'email': [
+        (String? value) => ValidationHelper.validateRequired(value, 'Email'),
+        (String? value) => ValidationHelper.isValidEmail(value ?? '') ? null : 'Please enter a valid email address',
+      ],
+      'password': [
+        (String? value) => ValidationHelper.validateRequired(value, 'Password'),
+        (String? value) => ValidationHelper.validateLength(value, 'Password', minLength: 6),
+      ],
+    };
+    
+    if (!validateForm(formData, fieldValidators)) {
+      PerformanceService.instance.endOperation('user_login');
+      showValidationSummary(context);
       return;
     }
 
     FocusScope.of(context).unfocus();
+    clearValidationErrors();
 
     setState(() {
       _isLoading = true;
@@ -533,6 +549,16 @@ class _LoginScreenState extends State<LoginScreen> {
         if (userCredentials['password'] == password) {
           // Success - trigger haptic feedback
           HapticFeedback.mediumImpact();
+          
+          // Set user context for crash reporting
+          await CrashReportingService.instance.setUserId(email);
+          await CrashReportingService.instance.setCustomKey('user_role', userCredentials['role']!);
+          
+          // Track successful login
+          PerformanceService.instance.trackUserAction('login_success', parameters: {
+            'user_role': userCredentials['role'],
+            'login_method': 'email_password',
+          });
 
           // Navigate based on role
           final role = userCredentials['role']!;
@@ -559,25 +585,45 @@ class _LoginScreenState extends State<LoginScreen> {
           }
         } else {
           // Wrong password
-          setState(() {
-            _passwordError = 'Incorrect password. Please try again.';
+          setFieldError('password', 'Incorrect password. Please try again.');
+          
+          PerformanceService.instance.trackUserAction('login_failed', parameters: {
+            'reason': 'wrong_password',
           });
+          
           HapticFeedback.heavyImpact();
         }
       } else {
         // Email not found
-        setState(() {
-          _emailError = 'No account found with this email address.';
+        setFieldError('email', 'No account found with this email address.');
+        
+        PerformanceService.instance.trackUserAction('login_failed', parameters: {
+          'reason': 'email_not_found',
         });
+        
         HapticFeedback.heavyImpact();
       }
-    } catch (e) {
+    } catch (e, stackTrace) {
       // Network or other error
+      ErrorService.instance.logError(
+        'Login failed',
+        error: e,
+        stackTrace: stackTrace,
+        context: {'email': email},
+      );
+      
+      await CrashReportingService.instance.recordError(
+        e,
+        stackTrace,
+        reason: 'Login error',
+        context: {'email': email},
+      );
+      
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              'Login failed. Please check your connection and try again.',
+              ErrorService.instance.formatApiError(e),
               style: AppTheme.lightTheme.textTheme.bodyMedium?.copyWith(
                 color: Colors.white,
               ),
@@ -593,6 +639,7 @@ class _LoginScreenState extends State<LoginScreen> {
       }
       HapticFeedback.heavyImpact();
     } finally {
+      PerformanceService.instance.endOperation('user_login');
       if (mounted) {
         setState(() => _isLoading = false);
       }

@@ -5,6 +5,7 @@ import '../presentation/dashboard_screen/dashboard_screen.dart';
 import '../presentation/schedule_list_screen/schedule_list_screen.dart';
 import '../presentation/login_screen/login_screen.dart';
 import '../presentation/invoice_generation_screen/invoice_generation_screen.dart';
+import '../presentation/debug_screen/debug_screen.dart';
 
 class AppRoutes {
   // TODO: Add your routes here
@@ -15,6 +16,7 @@ class AppRoutes {
   static const String scheduleList = '/schedule-list-screen';
   static const String login = '/login-screen';
   static const String invoiceGeneration = '/invoice-generation-screen';
+  static const String debug = '/debug-screen';
 
   static Map<String, WidgetBuilder> routes = {
     initial: (context) => const LoginScreen(),
@@ -24,6 +26,7 @@ class AppRoutes {
     scheduleList: (context) => const ScheduleListScreen(),
     login: (context) => const LoginScreen(),
     invoiceGeneration: (context) => const InvoiceGenerationScreen(),
+    debug: (context) => const DebugScreen(),
     // TODO: Add your other routes here
   };
 }

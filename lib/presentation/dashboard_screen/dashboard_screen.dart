@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:sizer/sizer.dart';
 
@@ -252,15 +253,30 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   color: theme.colorScheme.onSurface,
                 ),
               ),
-              TextButton(
-                onPressed: () => _viewAllActivities(),
-                child: Text(
-                  'View All',
-                  style: theme.textTheme.labelLarge?.copyWith(
-                    color: theme.colorScheme.primary,
-                    fontWeight: FontWeight.w600,
+              Row(
+                children: [
+                  if (kDebugMode)
+                    TextButton(
+                      onPressed: () => Navigator.pushNamed(context, '/debug-screen'),
+                      child: Text(
+                        'Debug',
+                        style: theme.textTheme.labelLarge?.copyWith(
+                          color: theme.colorScheme.secondary,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  TextButton(
+                    onPressed: () => _viewAllActivities(),
+                    child: Text(
+                      'View All',
+                      style: theme.textTheme.labelLarge?.copyWith(
+                        color: theme.colorScheme.primary,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
                   ),
-                ),
+                ],
               ),
             ],
           ),
