@@ -1,11 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:sizer/sizer.dart';
 
 import '../../core/app_export.dart';
-import '../../core/layout_constants.dart';
-import '../../utils/responsive_helper.dart';
 import '../../widgets/custom_app_bar.dart';
 import '../../widgets/custom_bottom_bar.dart';
 import './widgets/activity_item_widget.dart';
@@ -129,30 +126,27 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   currentDate: DateTime.now(),
                 ),
 
-                SizedBox(height: LayoutConstants.spacingLg),
+                SizedBox(height: 2.h),
 
                 // Metrics Cards
                 _buildMetricsSection(),
 
-                SizedBox(height: LayoutConstants.spacingXl),
+                SizedBox(height: 3.h),
 
                 // Quick Actions
-                Padding(
-                  padding: context.responsiveHorizontalPadding,
-                  child: QuickActionsWidget(
-                    onStartInspection: () => _navigateToInspection(),
-                    onViewSchedule: () => _navigateToSchedule(),
-                    onCreateInvoice: () => _navigateToInvoice(),
-                    onViewReports: () => _showReportsDialog(),
-                  ),
+                QuickActionsWidget(
+                  onStartInspection: () => _navigateToInspection(),
+                  onViewSchedule: () => _navigateToSchedule(),
+                  onCreateInvoice: () => _navigateToInvoice(),
+                  onViewReports: () => _showReportsDialog(),
                 ),
 
-                SizedBox(height: LayoutConstants.spacingXl),
+                SizedBox(height: 3.h),
 
                 // Recent Activity Section
                 _buildRecentActivitySection(),
 
-                SizedBox(height: LayoutConstants.spacingXxl * 2), // Bottom padding for FAB
+                SizedBox(height: 10.h), // Bottom padding for FAB
               ],
             ),
           ),
@@ -188,7 +182,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
-          padding: context.responsiveHorizontalPadding,
+          padding: EdgeInsets.symmetric(horizontal: 4.w),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -208,43 +202,30 @@ class _DashboardScreenState extends State<DashboardScreen> {
             ],
           ),
         ),
-        SizedBox(height: LayoutConstants.spacingLg),
-        // Improved responsive grid layout
-        Padding(
-          padding: context.responsiveHorizontalPadding,
-          child: LayoutBuilder(
-            builder: (context, constraints) {
-              // Get optimal number of columns based on screen size
-              final columns = ResponsiveHelper.getOptimalColumns(context, minCardWidth: 160);
-              final cardWidth = ResponsiveHelper.getCardWidth(context, columns: columns);
-              final cardHeight = ResponsiveHelper.getOptimalCardHeight(
-                context,
-                contentHeight: cardWidth * LayoutConstants.cardAspectRatioMetric,
-                minHeight: LayoutConstants.cardMinHeight,
-              );
-              
-              return Wrap(
-                spacing: LayoutConstants.gridSpacing,
-                runSpacing: LayoutConstants.gridSpacing,
-                children: _metrics.asMap().entries.map((entry) {
-                  final index = entry.key;
-                  final metric = entry.value;
-                  
-                  return SizedBox(
-                    width: cardWidth,
-                    height: cardHeight,
-                    child: MetricCardWidget(
-                      title: metric['title'],
-                      value: metric['value'],
-                      subtitle: metric['subtitle'],
-                      icon: metric['icon'],
-                      showTrend: metric['showTrend'] ?? false,
-                      trendValue: metric['trendValue'],
-                      isPositiveTrend: metric['isPositiveTrend'] ?? true,
-                      onTap: () => _onMetricTap(index),
-                    ),
-                  );
-                }).toList(),
+        SizedBox(height: 2.h),
+        SizedBox(
+          height: 40.h,
+          child: GridView.builder(
+            padding: EdgeInsets.symmetric(horizontal: 4.w),
+            scrollDirection: Axis.horizontal,
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 2,
+              childAspectRatio: 1.2,
+              crossAxisSpacing: 16,
+              mainAxisSpacing: 16,
+            ),
+            itemCount: _metrics.length,
+            itemBuilder: (context, index) {
+              final metric = _metrics[index];
+              return MetricCardWidget(
+                title: metric['title'],
+                value: metric['value'],
+                subtitle: metric['subtitle'],
+                icon: metric['icon'],
+                showTrend: metric['showTrend'] ?? false,
+                trendValue: metric['trendValue'],
+                isPositiveTrend: metric['isPositiveTrend'] ?? true,
+                onTap: () => _onMetricTap(index),
               );
             },
           ),
@@ -260,7 +241,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
-          padding: context.responsiveHorizontalPadding,
+          padding: EdgeInsets.symmetric(horizontal: 4.w),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -271,49 +252,31 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   color: theme.colorScheme.onSurface,
                 ),
               ),
-              Row(
-                children: [
-                  if (kDebugMode)
-                    TextButton(
-                      onPressed: () => Navigator.pushNamed(context, '/debug-screen'),
-                      child: Text(
-                        'Debug',
-                        style: theme.textTheme.labelLarge?.copyWith(
-                          color: theme.colorScheme.secondary,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
-                  TextButton(
-                    onPressed: () => _viewAllActivities(),
-                    child: Text(
-                      'View All',
-                      style: theme.textTheme.labelLarge?.copyWith(
-                        color: theme.colorScheme.primary,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
+              TextButton(
+                onPressed: () => _viewAllActivities(),
+                child: Text(
+                  'View All',
+                  style: theme.textTheme.labelLarge?.copyWith(
+                    color: theme.colorScheme.primary,
+                    fontWeight: FontWeight.w600,
                   ),
-                ],
+                ),
               ),
             ],
           ),
         ),
-        SizedBox(height: LayoutConstants.spacingLg),
+        SizedBox(height: 2.h),
         ListView.builder(
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
-          padding: context.responsiveHorizontalPadding,
+          padding: EdgeInsets.symmetric(horizontal: 4.w),
           itemCount: _recentActivities.length,
           itemBuilder: (context, index) {
             final activity = _recentActivities[index];
-            return Padding(
-              padding: EdgeInsets.only(bottom: LayoutConstants.spacingSm),
-              child: ActivityItemWidget(
-                activity: activity,
-                onTap: () => _onActivityTap(activity),
-                onLongPress: () => _showActivityContextMenu(context, activity),
-              ),
+            return ActivityItemWidget(
+              activity: activity,
+              onTap: () => _onActivityTap(activity),
+              onLongPress: () => _showActivityContextMenu(context, activity),
             );
           },
         ),

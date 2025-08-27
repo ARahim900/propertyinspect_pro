@@ -163,48 +163,39 @@ class _InspectionDetailScreenState extends State<InspectionDetailScreen> {
               child: CustomScrollView(
                 slivers: [
                   SliverToBoxAdapter(
-                    child: Padding(
-                      padding: EdgeInsets.symmetric(horizontal: 16),
-                      child: Column(
-                        children: [
-                          SizedBox(height: 16),
-                          PropertyHeaderWidget(
-                            propertyData: _inspectionData['property']
-                                as Map<String, dynamic>,
-                          ),
-                          SizedBox(height: 24),
-                          ProgressIndicatorWidget(
-                            progress: progress,
-                            completedItems: completedItems,
-                            totalItems: totalItems,
-                          ),
-                          SizedBox(height: 24),
-                        ],
-                      ),
+                    child: Column(
+                      children: [
+                        SizedBox(height: 8.h),
+                        PropertyHeaderWidget(
+                          propertyData: _inspectionData['property']
+                              as Map<String, dynamic>,
+                        ),
+                        SizedBox(height: 16.h),
+                        ProgressIndicatorWidget(
+                          progress: progress,
+                          completedItems: completedItems,
+                          totalItems: totalItems,
+                        ),
+                        SizedBox(height: 16.h),
+                      ],
                     ),
                   ),
-                  SliverPadding(
-                    padding: EdgeInsets.symmetric(horizontal: 16),
-                    sliver: SliverList(
-                      delegate: SliverChildBuilderDelegate(
-                        (context, index) {
-                          final area = areas[index] as Map<String, dynamic>;
-                          return Padding(
-                            padding: EdgeInsets.only(bottom: 16),
-                            child: InspectionAreaWidget(
-                              areaData: area,
-                              onItemStatusChanged: _onItemStatusChanged,
-                              onCommentChanged: _onCommentChanged,
-                              onPhotoAdded: _onPhotoAdded,
-                            ),
-                          );
-                        },
-                        childCount: areas.length,
-                      ),
+                  SliverList(
+                    delegate: SliverChildBuilderDelegate(
+                      (context, index) {
+                        final area = areas[index] as Map<String, dynamic>;
+                        return InspectionAreaWidget(
+                          areaData: area,
+                          onItemStatusChanged: _onItemStatusChanged,
+                          onCommentChanged: _onCommentChanged,
+                          onPhotoAdded: _onPhotoAdded,
+                        );
+                      },
+                      childCount: areas.length,
                     ),
                   ),
                   SliverToBoxAdapter(
-                    child: SizedBox(height: 120), // Space for FAB
+                    child: SizedBox(height: 100.h), // Space for FAB
                   ),
                 ],
               ),

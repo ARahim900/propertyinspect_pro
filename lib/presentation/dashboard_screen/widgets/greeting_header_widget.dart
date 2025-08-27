@@ -19,10 +19,9 @@ class GreetingHeaderWidget extends StatelessWidget {
     final theme = Theme.of(context);
 
     return Container(
-      padding: EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+      padding: EdgeInsets.symmetric(horizontal: 4.w, vertical: 2.h),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           Expanded(
             child: Column(
@@ -32,49 +31,40 @@ class GreetingHeaderWidget extends StatelessWidget {
                   _getGreeting(),
                   style: theme.textTheme.bodyLarge?.copyWith(
                     color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
-                    fontSize: 16,
                   ),
                 ),
-                SizedBox(height: 4),
+                SizedBox(height: 0.5.h),
                 Text(
                   userName,
-                  style: theme.textTheme.headlineMedium?.copyWith(
+                  style: theme.textTheme.headlineSmall?.copyWith(
                     fontWeight: FontWeight.w700,
                     color: theme.colorScheme.onSurface,
-                    fontSize: 28,
-                    height: 1.2,
                   ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
-                SizedBox(height: 6),
+                SizedBox(height: 0.5.h),
                 Text(
                   _formatDate(currentDate),
                   style: theme.textTheme.bodyMedium?.copyWith(
                     color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
-                    fontSize: 14,
                   ),
                 ),
               ],
             ),
           ),
-          SizedBox(width: 16),
           Container(
-            width: 56,
-            height: 56,
+            width: 12.w,
+            height: 12.w,
             decoration: BoxDecoration(
               color: theme.colorScheme.primary.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(
-                color: theme.colorScheme.primary.withValues(alpha: 0.2),
-                width: 1,
-              ),
+              borderRadius: BorderRadius.circular(3.w),
             ),
             child: Center(
               child: CustomIconWidget(
                 iconName: 'person',
                 color: theme.colorScheme.primary,
-                size: 24,
+                size: 6.w,
               ),
             ),
           ),
