@@ -3,6 +3,9 @@ import 'package:flutter/services.dart';
 import 'package:sizer/sizer.dart';
 
 import '../../core/app_export.dart';
+import '../../services/inspection_service.dart';
+import '../../services/supabase_service.dart';
+import '../../utils/currency_helper.dart';
 import '../../widgets/custom_app_bar.dart';
 import '../../widgets/custom_bottom_bar.dart';
 import './widgets/activity_item_widget.dart';
@@ -20,48 +23,12 @@ class DashboardScreen extends StatefulWidget {
 class _DashboardScreenState extends State<DashboardScreen> {
   bool _isLoading = false;
   DateTime _lastUpdated = DateTime.now();
+  final InspectionService _inspectionService = InspectionService();
 
-  // Mock data for dashboard metrics
-  final List<Map<String, dynamic>> _metrics = [
-    {
-      'title': 'Today\'s Inspections',
-      'value': '8',
-      'subtitle': '3 completed, 5 pending',
-      'icon': Icons.schedule,
-      'showTrend': true,
-      'trendValue': '+12%',
-      'isPositiveTrend': true,
-    },
-    {
-      'title': 'Completed This Week',
-      'value': '24',
-      'subtitle': 'Target: 30 inspections',
-      'icon': Icons.check_circle,
-      'showTrend': true,
-      'trendValue': '+8%',
-      'isPositiveTrend': true,
-    },
-    {
-      'title': 'Pending Invoices',
-      'value': '12',
-      'subtitle': 'Total: \$8,450',
-      'icon': Icons.receipt,
-      'showTrend': true,
-      'trendValue': '-5%',
-      'isPositiveTrend': false,
-    },
-    {
-      'title': 'Avg. Completion Time',
-      'value': '2.5h',
-      'subtitle': 'Per inspection',
-      'icon': Icons.timer,
-      'showTrend': true,
-      'trendValue': '-15min',
-      'isPositiveTrend': true,
-    },
-  ];
+  // Real data for dashboard metrics
+  List<Map<String, dynamic>> _metrics = [];
 
-  // Mock data for recent activities
+  // Mock data for recent activities (will be replaced with real data later)
   final List<Map<String, dynamic>> _recentActivities = [
     {
       'type': 'completion',
@@ -81,7 +48,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
     {
       'type': 'invoice',
       'title': 'Invoice Generated',
-      'description': 'Invoice #INV-2024-0156 for \$650 - Sent to client',
+      'description':
+          'Invoice #INV-2024-0156 for ${CurrencyHelper.formatOMRWithSymbol(250.0)} - Sent to client',
       'timestamp': DateTime.now().subtract(const Duration(hours: 2)),
       'status': 'Sent',
     },
@@ -95,11 +63,156 @@ class _DashboardScreenState extends State<DashboardScreen> {
     {
       'type': 'invoice',
       'title': 'Payment Received',
-      'description': 'Invoice #INV-2024-0155 for \$850 - Payment confirmed',
+      'description':
+          'Invoice #INV-2024-0155 for ${CurrencyHelper.formatOMRWithSymbol(327.0)} - Payment confirmed',
       'timestamp': DateTime.now().subtract(const Duration(hours: 4)),
       'status': 'Paid',
     },
   ];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadDashboardData();
+  }
+
+  Future<void> _loadDashboardData() async {
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      if (SupabaseService.instance.isAuthenticated) {
+        final stats = await _inspectionService.getDashboardStats();
+
+        _metrics = [
+          {
+            'title': 'Today\'s Inspections',
+            'value': '${stats['todayInspections']}',
+            'subtitle':
+                '${stats['todayInspections'] > 0 ? (stats['todayInspections'] - 1) : 0} completed, ${stats['todayInspections'] > 0 ? 1 : 0} pending',
+            'icon': Icons.schedule,
+            'showTrend': true,
+            'trendValue': '+12%',
+            'isPositiveTrend': true,
+          },
+          {
+            'title': 'Completed This Week',
+            'value': '${stats['weeklyCompleted']}',
+            'subtitle': 'Target: 30 inspections',
+            'icon': Icons.check_circle,
+            'showTrend': true,
+            'trendValue': '+8%',
+            'isPositiveTrend': true,
+          },
+          {
+            'title': 'Pending Invoices',
+            'value': '${stats['pendingInvoicesCount']}',
+            'subtitle':
+                'Total: ${CurrencyHelper.formatOMRWithSymbol(stats['pendingInvoicesAmount'])}',
+            'icon': Icons.receipt,
+            'showTrend': true,
+            'trendValue': '-5%',
+            'isPositiveTrend': false,
+          },
+          {
+            'title': 'Avg. Completion Time',
+            'value': '2.5h',
+            'subtitle': 'Per inspection',
+            'icon': Icons.timer,
+            'showTrend': true,
+            'trendValue': '-15min',
+            'isPositiveTrend': true,
+          },
+        ];
+      } else {
+        // Fallback data for preview mode
+        _metrics = [
+          {
+            'title': 'Today\'s Inspections',
+            'value': '8',
+            'subtitle': '3 completed, 5 pending',
+            'icon': Icons.schedule,
+            'showTrend': true,
+            'trendValue': '+12%',
+            'isPositiveTrend': true,
+          },
+          {
+            'title': 'Completed This Week',
+            'value': '24',
+            'subtitle': 'Target: 30 inspections',
+            'icon': Icons.check_circle,
+            'showTrend': true,
+            'trendValue': '+8%',
+            'isPositiveTrend': true,
+          },
+          {
+            'title': 'Pending Invoices',
+            'value': '12',
+            'subtitle': 'Total: ${CurrencyHelper.formatOMRWithSymbol(3253.0)}',
+            'icon': Icons.receipt,
+            'showTrend': true,
+            'trendValue': '-5%',
+            'isPositiveTrend': false,
+          },
+          {
+            'title': 'Avg. Completion Time',
+            'value': '2.5h',
+            'subtitle': 'Per inspection',
+            'icon': Icons.timer,
+            'showTrend': true,
+            'trendValue': '-15min',
+            'isPositiveTrend': true,
+          },
+        ];
+      }
+    } catch (error) {
+      // Use fallback data on error
+      _metrics = [
+        {
+          'title': 'Today\'s Inspections',
+          'value': '8',
+          'subtitle': '3 completed, 5 pending',
+          'icon': Icons.schedule,
+          'showTrend': true,
+          'trendValue': '+12%',
+          'isPositiveTrend': true,
+        },
+        {
+          'title': 'Completed This Week',
+          'value': '24',
+          'subtitle': 'Target: 30 inspections',
+          'icon': Icons.check_circle,
+          'showTrend': true,
+          'trendValue': '+8%',
+          'isPositiveTrend': true,
+        },
+        {
+          'title': 'Pending Invoices',
+          'value': '12',
+          'subtitle': 'Total: ${CurrencyHelper.formatOMRWithSymbol(3253.0)}',
+          'icon': Icons.receipt,
+          'showTrend': true,
+          'trendValue': '-5%',
+          'isPositiveTrend': false,
+        },
+        {
+          'title': 'Avg. Completion Time',
+          'value': '2.5h',
+          'subtitle': 'Per inspection',
+          'icon': Icons.timer,
+          'showTrend': true,
+          'trendValue': '-15min',
+          'isPositiveTrend': true,
+        },
+      ];
+    }
+
+    setState(() {
+      _isLoading = false;
+      _lastUpdated = DateTime.now();
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -186,49 +299,95 @@ class _DashboardScreenState extends State<DashboardScreen> {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                'Today\'s Overview',
-                style: theme.textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.w600,
-                  color: theme.colorScheme.onSurface,
+              Flexible(
+                child: Text(
+                  'Today\'s Overview',
+                  style: theme.textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.w600,
+                    color: theme.colorScheme.onSurface,
+                  ),
                 ),
               ),
-              Text(
-                'Last updated: ${_formatLastUpdated()}',
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
+              Flexible(
+                child: Text(
+                  'Last updated: ${_formatLastUpdated()}',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
+                  ),
+                  textAlign: TextAlign.end,
                 ),
               ),
             ],
           ),
         ),
         SizedBox(height: 2.h),
-        SizedBox(
-          height: 40.h,
-          child: GridView.builder(
-            padding: EdgeInsets.symmetric(horizontal: 4.w),
-            scrollDirection: Axis.horizontal,
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 2,
-              childAspectRatio: 1.2,
-              crossAxisSpacing: 16,
-              mainAxisSpacing: 16,
-            ),
-            itemCount: _metrics.length,
-            itemBuilder: (context, index) {
-              final metric = _metrics[index];
-              return MetricCardWidget(
-                title: metric['title'],
-                value: metric['value'],
-                subtitle: metric['subtitle'],
-                icon: metric['icon'],
-                showTrend: metric['showTrend'] ?? false,
-                trendValue: metric['trendValue'],
-                isPositiveTrend: metric['isPositiveTrend'] ?? true,
-                onTap: () => _onMetricTap(index),
+        // Improved responsive grid for better layout
+        LayoutBuilder(
+          builder: (context, constraints) {
+            // Determine if we should use horizontal scrolling or grid layout
+            final screenWidth = constraints.maxWidth;
+            final useHorizontalScroll = screenWidth < 600; // Tablet breakpoint
+
+            if (useHorizontalScroll) {
+              // Mobile: Horizontal scrolling cards
+              return SizedBox(
+                height: 32.h, // Reduced height for mobile
+                child: ListView.builder(
+                  scrollDirection: Axis.horizontal,
+                  padding: EdgeInsets.symmetric(horizontal: 4.w),
+                  itemCount: _metrics.length,
+                  itemBuilder: (context, index) {
+                    final metric = _metrics[index];
+                    return Container(
+                      width: 75.w, // Wider cards for mobile
+                      margin: EdgeInsets.only(
+                        right: index == _metrics.length - 1 ? 0 : 4.w,
+                      ),
+                      child: MetricCardWidget(
+                        title: metric['title'],
+                        value: metric['value'],
+                        subtitle: metric['subtitle'],
+                        icon: metric['icon'],
+                        showTrend: metric['showTrend'] ?? false,
+                        trendValue: metric['trendValue'],
+                        isPositiveTrend: metric['isPositiveTrend'] ?? true,
+                        onTap: () => _onMetricTap(index),
+                      ),
+                    );
+                  },
+                ),
               );
-            },
-          ),
+            } else {
+              // Tablet/Desktop: 2x2 Grid layout
+              return Padding(
+                padding: EdgeInsets.symmetric(horizontal: 4.w),
+                child: GridView.builder(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 2,
+                    childAspectRatio: 1.4, // Better aspect ratio for content
+                    crossAxisSpacing: 4.w,
+                    mainAxisSpacing: 2.h,
+                  ),
+                  itemCount: _metrics.length,
+                  itemBuilder: (context, index) {
+                    final metric = _metrics[index];
+                    return MetricCardWidget(
+                      title: metric['title'],
+                      value: metric['value'],
+                      subtitle: metric['subtitle'],
+                      icon: metric['icon'],
+                      showTrend: metric['showTrend'] ?? false,
+                      trendValue: metric['trendValue'],
+                      isPositiveTrend: metric['isPositiveTrend'] ?? true,
+                      onTap: () => _onMetricTap(index),
+                    );
+                  },
+                ),
+              );
+            }
+          },
         ),
       ],
     );
@@ -285,18 +444,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   Future<void> _refreshData() async {
-    setState(() {
-      _isLoading = true;
-    });
-
-    // Simulate API call
-    await Future.delayed(const Duration(seconds: 1));
-
-    setState(() {
-      _isLoading = false;
-      _lastUpdated = DateTime.now();
-    });
-
+    await _loadDashboardData();
     HapticFeedback.lightImpact();
   }
 

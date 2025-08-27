@@ -42,8 +42,11 @@ class MetricCardWidget extends StatelessWidget {
         }
       },
       child: Container(
-        width: 42.w,
         padding: EdgeInsets.all(4.w),
+        constraints: BoxConstraints(
+          minHeight: 20.h, // Minimum height for content
+          maxHeight: 30.h, // Maximum height to prevent overflow
+        ),
         decoration: BoxDecoration(
           color: backgroundColor ?? theme.colorScheme.surface,
           borderRadius: BorderRadius.circular(3.w),
@@ -62,73 +65,90 @@ class MetricCardWidget extends StatelessWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                CustomIconWidget(
-                  iconName: _getIconName(icon),
-                  color: iconColor ?? theme.colorScheme.primary,
-                  size: 6.w,
+                Flexible(
+                  child: CustomIconWidget(
+                    iconName: _getIconName(icon),
+                    color: iconColor ?? theme.colorScheme.primary,
+                    size: 6.w,
+                  ),
                 ),
                 if (showTrend && trendValue != null)
-                  Container(
-                    padding:
-                        EdgeInsets.symmetric(horizontal: 2.w, vertical: 0.5.h),
-                    decoration: BoxDecoration(
-                      color: isPositiveTrend
-                          ? AppTheme.lightTheme.colorScheme.tertiary
-                              .withValues(alpha: 0.1)
-                          : AppTheme.lightTheme.colorScheme.error
-                              .withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(2.w),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        CustomIconWidget(
-                          iconName:
-                              isPositiveTrend ? 'trending_up' : 'trending_down',
-                          color: isPositiveTrend
-                              ? AppTheme.lightTheme.colorScheme.tertiary
-                              : AppTheme.lightTheme.colorScheme.error,
-                          size: 3.w,
-                        ),
-                        SizedBox(width: 1.w),
-                        Text(
-                          trendValue!,
-                          style: theme.textTheme.labelSmall?.copyWith(
+                  Flexible(
+                    child: Container(
+                      padding: EdgeInsets.symmetric(
+                          horizontal: 2.w, vertical: 0.5.h),
+                      decoration: BoxDecoration(
+                        color: isPositiveTrend
+                            ? AppTheme.lightTheme.colorScheme.tertiary
+                                .withValues(alpha: 0.1)
+                            : AppTheme.lightTheme.colorScheme.error
+                                .withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(2.w),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          CustomIconWidget(
+                            iconName: isPositiveTrend
+                                ? 'trending_up'
+                                : 'trending_down',
                             color: isPositiveTrend
                                 ? AppTheme.lightTheme.colorScheme.tertiary
                                 : AppTheme.lightTheme.colorScheme.error,
-                            fontWeight: FontWeight.w600,
+                            size: 3.w,
                           ),
-                        ),
-                      ],
+                          SizedBox(width: 1.w),
+                          Flexible(
+                            child: Text(
+                              trendValue!,
+                              style: theme.textTheme.labelSmall?.copyWith(
+                                color: isPositiveTrend
+                                    ? AppTheme.lightTheme.colorScheme.tertiary
+                                    : AppTheme.lightTheme.colorScheme.error,
+                                fontWeight: FontWeight.w600,
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
               ],
             ),
             SizedBox(height: 2.h),
-            Text(
-              value,
-              style: theme.textTheme.headlineMedium?.copyWith(
-                fontWeight: FontWeight.w700,
-                color: theme.colorScheme.onSurface,
+            Flexible(
+              child: Text(
+                value,
+                style: theme.textTheme.headlineMedium?.copyWith(
+                  fontWeight: FontWeight.w700,
+                  color: theme.colorScheme.onSurface,
+                ),
+                overflow: TextOverflow.ellipsis,
               ),
             ),
             SizedBox(height: 0.5.h),
-            Text(
-              title,
-              style: theme.textTheme.bodyMedium?.copyWith(
-                color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
-                fontWeight: FontWeight.w500,
+            Flexible(
+              child: Text(
+                title,
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
+                  fontWeight: FontWeight.w500,
+                ),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
               ),
             ),
             SizedBox(height: 0.5.h),
-            Text(
-              subtitle,
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
+            Flexible(
+              child: Text(
+                subtitle,
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
+                ),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
               ),
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
             ),
           ],
         ),

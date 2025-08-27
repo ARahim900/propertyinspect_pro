@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:sizer/sizer.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/app_export.dart';
+import '../../../utils/responsive_helper.dart';
 
 class PropertyHeaderWidget extends StatelessWidget {
   final Map<String, dynamic> propertyData;
@@ -16,13 +16,17 @@ class PropertyHeaderWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final mediaQuery = MediaQuery.of(context);
 
     return Container(
-      margin: EdgeInsets.all(16.w),
-      padding: EdgeInsets.all(16.w),
+      margin: EdgeInsets.symmetric(
+        horizontal: ResponsiveHelper.getSpacing(context, small: 16),
+        vertical: ResponsiveHelper.getSpacing(context, small: 8),
+      ),
+      padding: EdgeInsets.all(ResponsiveHelper.getSpacing(context, small: 16)),
       decoration: BoxDecoration(
         color: theme.colorScheme.surface,
-        borderRadius: BorderRadius.circular(12.w),
+        borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
             color: theme.colorScheme.shadow.withValues(alpha: 0.1),
@@ -34,7 +38,9 @@ class PropertyHeaderWidget extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Property address and status row
           Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Expanded(
                 child: Column(
@@ -47,24 +53,33 @@ class PropertyHeaderWidget extends StatelessWidget {
                       ),
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
+                      textDirection: TextDirection.ltr,
                     ),
-                    SizedBox(height: 4.h),
+                    SizedBox(
+                        height: ResponsiveHelper.getSpacing(context, small: 4)),
                     Text(
                       '${propertyData['city'] as String? ?? 'City'}, ${propertyData['state'] as String? ?? 'State'} ${propertyData['zipCode'] as String? ?? '00000'}',
                       style: theme.textTheme.bodyMedium?.copyWith(
                         color:
                             theme.colorScheme.onSurface.withValues(alpha: 0.7),
                       ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      textDirection: TextDirection.ltr,
                     ),
                   ],
                 ),
               ),
+              SizedBox(width: ResponsiveHelper.getSpacing(context, small: 12)),
               Container(
-                padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 6.h),
+                padding: EdgeInsets.symmetric(
+                  horizontal: ResponsiveHelper.getSpacing(context, small: 12),
+                  vertical: ResponsiveHelper.getSpacing(context, small: 6),
+                ),
                 decoration: BoxDecoration(
                   color: _getStatusColor(
                       propertyData['status'] as String? ?? 'pending', theme),
-                  borderRadius: BorderRadius.circular(16.w),
+                  borderRadius: BorderRadius.circular(16),
                 ),
                 child: Text(
                   (propertyData['status'] as String? ?? 'pending')
@@ -73,30 +88,45 @@ class PropertyHeaderWidget extends StatelessWidget {
                     color: Colors.white,
                     fontWeight: FontWeight.w600,
                   ),
+                  textDirection: TextDirection.ltr,
                 ),
               ),
             ],
           ),
-          SizedBox(height: 16.h),
+
+          SizedBox(height: ResponsiveHelper.getSpacing(context, small: 16)),
+
+          // Client and scheduling info
           Container(
-            padding: EdgeInsets.all(12.w),
+            padding:
+                EdgeInsets.all(ResponsiveHelper.getSpacing(context, small: 12)),
             decoration: BoxDecoration(
-              color: theme.colorScheme.surface.withValues(alpha: 0.5),
-              borderRadius: BorderRadius.circular(8.w),
+              color: theme.colorScheme.surfaceContainerHighest,
+              borderRadius: BorderRadius.circular(8),
               border: Border.all(
                 color: theme.colorScheme.outline.withValues(alpha: 0.2),
               ),
             ),
             child: Column(
               children: [
+                // Client info row
                 Row(
                   children: [
-                    CustomIconWidget(
-                      iconName: 'person',
-                      color: theme.colorScheme.primary,
-                      size: 20.w,
+                    Container(
+                      padding: EdgeInsets.all(
+                          ResponsiveHelper.getSpacing(context, small: 8)),
+                      decoration: BoxDecoration(
+                        color: theme.colorScheme.primary.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: CustomIconWidget(
+                        iconName: 'person',
+                        color: theme.colorScheme.primary,
+                        size: ResponsiveHelper.getIconSize(context, small: 20),
+                      ),
                     ),
-                    SizedBox(width: 12.w),
+                    SizedBox(
+                        width: ResponsiveHelper.getSpacing(context, small: 12)),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -107,13 +137,18 @@ class PropertyHeaderWidget extends StatelessWidget {
                               color: theme.colorScheme.onSurface
                                   .withValues(alpha: 0.6),
                             ),
+                            textDirection: TextDirection.ltr,
                           ),
+                          SizedBox(height: 2),
                           Text(
                             propertyData['clientName'] as String? ??
                                 'Client Name',
                             style: theme.textTheme.bodyMedium?.copyWith(
                               fontWeight: FontWeight.w500,
                             ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            textDirection: TextDirection.ltr,
                           ),
                         ],
                       ),
@@ -122,30 +157,46 @@ class PropertyHeaderWidget extends StatelessWidget {
                       onTap: () => _makePhoneCall(
                           propertyData['clientPhone'] as String? ?? ''),
                       child: Container(
-                        padding: EdgeInsets.all(8.w),
+                        padding: EdgeInsets.all(
+                            ResponsiveHelper.getSpacing(context, small: 8)),
                         decoration: BoxDecoration(
                           color:
                               theme.colorScheme.primary.withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(8.w),
+                          borderRadius: BorderRadius.circular(8),
                         ),
                         child: CustomIconWidget(
                           iconName: 'phone',
                           color: theme.colorScheme.primary,
-                          size: 18.w,
+                          size:
+                              ResponsiveHelper.getIconSize(context, small: 18),
                         ),
                       ),
                     ),
                   ],
                 ),
-                SizedBox(height: 12.h),
+
+                SizedBox(
+                    height: ResponsiveHelper.getSpacing(context, small: 12)),
+
+                // Scheduling info row
                 Row(
                   children: [
-                    CustomIconWidget(
-                      iconName: 'schedule',
-                      color: theme.colorScheme.secondary,
-                      size: 20.w,
+                    Container(
+                      padding: EdgeInsets.all(
+                          ResponsiveHelper.getSpacing(context, small: 8)),
+                      decoration: BoxDecoration(
+                        color:
+                            theme.colorScheme.secondary.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: CustomIconWidget(
+                        iconName: 'schedule',
+                        color: theme.colorScheme.secondary,
+                        size: ResponsiveHelper.getIconSize(context, small: 20),
+                      ),
                     ),
-                    SizedBox(width: 12.w),
+                    SizedBox(
+                        width: ResponsiveHelper.getSpacing(context, small: 12)),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -156,12 +207,17 @@ class PropertyHeaderWidget extends StatelessWidget {
                               color: theme.colorScheme.onSurface
                                   .withValues(alpha: 0.6),
                             ),
+                            textDirection: TextDirection.ltr,
                           ),
+                          SizedBox(height: 2),
                           Text(
                             '${propertyData['scheduledDate'] as String? ?? 'Aug 26, 2025'} at ${propertyData['scheduledTime'] as String? ?? '10:00 AM'}',
                             style: theme.textTheme.bodyMedium?.copyWith(
                               fontWeight: FontWeight.w500,
                             ),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            textDirection: TextDirection.ltr,
                           ),
                         ],
                       ),

@@ -72,11 +72,12 @@ class AuthService {
     if (!isAuthenticated) return null;
 
     try {
-      final response = await _client
-          .from('profiles')
-          .select()
-          .eq('user_id', currentUser!.id)
-          .single();
+      final response =
+          await _client
+              .from('profiles')
+              .select()
+              .eq('user_id', currentUser!.id)
+              .single();
 
       return UserProfile.fromJson(response);
     } catch (error) {
@@ -89,12 +90,16 @@ class AuthService {
     if (!isAuthenticated) throw Exception('User not authenticated');
 
     try {
-      final response = await _client
-          .from('profiles')
-          .update(updates)
-          .eq('user_id', currentUser!.id)
-          .select()
-          .single();
+      final response =
+          await _client
+              .from('profiles')
+              .update({
+                ...updates,
+                'updated_at': DateTime.now().toIso8601String(),
+              })
+              .eq('user_id', currentUser!.id)
+              .select()
+              .single();
 
       return UserProfile.fromJson(response);
     } catch (error) {
@@ -109,6 +114,8 @@ class AuthService {
         'user_id': user.id,
         'email': user.email ?? '',
         'role': 'staff', // Default role
+        'created_at': DateTime.now().toIso8601String(),
+        'updated_at': DateTime.now().toIso8601String(),
       });
     } catch (error) {
       throw Exception('Failed to create user profile: $error');
@@ -140,5 +147,67 @@ class AuthService {
   Future<bool> isAdmin() async {
     final role = await getUserRole();
     return role == 'admin';
+  }
+
+  // Sign in with demo credentials (for development mode)
+  Future<AuthResponse?> signInWithDemoCredentials({
+    required String email,
+    required String password,
+  }) async {
+    // Demo credentials mapping
+    final Map<String, Map<String, String>> demoCredentials = {
+      'inspector@propertyinspect.com': {
+        'password': 'inspector123',
+        'role': 'staff',
+        'name': 'John Inspector',
+      },
+      'admin@propertyinspect.com': {
+        'password': 'admin123',
+        'role': 'admin',
+        'name': 'Sarah Admin',
+      },
+      'manager@propertyinspect.com': {
+        'password': 'manager123',
+        'role': 'staff',
+        'name': 'Mike Manager',
+      },
+    };
+
+    try {
+      // Check if it's a demo account first
+      if (demoCredentials.containsKey(email.toLowerCase())) {
+        final demoData = demoCredentials[email.toLowerCase()]!;
+        if (demoData['password'] == password) {
+          // Try to sign in with Supabase (in case the demo account exists in the database)
+          try {
+            return await signIn(email: email, password: password);
+          } catch (e) {
+            // If demo account doesn't exist in Supabase, create it
+            try {
+              final response = await signUp(email: email, password: password);
+              // Update profile with demo data
+              if (response.user != null) {
+                await _client
+                    .from('profiles')
+                    .update({
+                      'role': demoData['role'] == 'admin' ? 'admin' : 'staff',
+                      'updated_at': DateTime.now().toIso8601String(),
+                    })
+                    .eq('user_id', response.user!.id);
+              }
+              return response;
+            } catch (signupError) {
+              // If signup also fails, return null
+              return null;
+            }
+          }
+        }
+      }
+
+      // For non-demo accounts, try regular sign in
+      return await signIn(email: email, password: password);
+    } catch (error) {
+      throw Exception('Authentication failed: $error');
+    }
   }
 }

@@ -1,199 +1,175 @@
-import 'package:supabase_flutter/supabase_flutter.dart';
-
-import './auth_service.dart';
-import './inspection_service.dart';
-import './invoice_service.dart';
-import './schedule_service.dart';
 import './supabase_service.dart';
 
 class DashboardService {
-  static DashboardService? _instance;
-  static DashboardService get instance => _instance ??= DashboardService._();
+  final SupabaseService _supabase = SupabaseService.instance;
 
-  DashboardService._();
-
-  final SupabaseClient _client = SupabaseService.instance.client;
-
-  // Get comprehensive dashboard data
-  Future<Map<String, dynamic>> getDashboardData() async {
-    final user = AuthService.instance.currentUser;
-    if (user == null) throw Exception('User not authenticated');
-
+  // Get dashboard statistics
+  Future<Map<String, dynamic>> getDashboardStats() async {
     try {
-      // Get all data in parallel for better performance
-      final results = await Future.wait([
-        _getInspectionStats(),
-        _getScheduleStats(),
-        _getInvoiceStats(),
-        _getRecentActivity(),
-      ]);
+      final userId = _supabase.currentUserId!;
 
-      return {
-        'inspections': results[0],
-        'schedules': results[1],
-        'invoices': results[2],
-        'recentActivity': results[3],
-        'user': await AuthService.instance.getCurrentUserProfile(),
-      };
-    } catch (error) {
-      throw Exception('Failed to get dashboard data: $error');
-    }
-  }
+      // Get today's inspections count
+      final todayStart = DateTime.now().toIso8601String().split('T')[0];
 
-  // Get inspection statistics
-  Future<Map<String, dynamic>> _getInspectionStats() async {
-    final user = AuthService.instance.currentUser;
-    if (user == null) return {};
-
-    try {
-      // Get inspection counts
-      final totalResponse = await _client
+      final todayInspections = await _supabase.client
           .from('inspections')
-          .select()
-          .eq('user_id', user.id)
-          .count();
+          .select('id')
+          .eq('user_id', userId)
+          .eq('inspection_date', todayStart);
 
-      // Get this month's inspections
-      final now = DateTime.now();
-      final thisMonth = DateTime(now.year, now.month, 1);
-      final thisMonthResponse = await _client
+      // Get this week's completed inspections
+      final weekStart = DateTime.now()
+          .subtract(Duration(days: 7))
+          .toIso8601String()
+          .split('T')[0];
+
+      final weeklyInspections = await _supabase.client
           .from('inspections')
-          .select()
-          .eq('user_id', user.id)
-          .gte('created_at', thisMonth.toIso8601String())
-          .count();
+          .select('id')
+          .eq('user_id', userId)
+          .gte('inspection_date', weekStart);
 
-      // Get recent inspections
-      final recentInspections =
-          await InspectionService.instance.getRecentInspections(limit: 5);
+      // Get pending invoices
+      final pendingInvoices = await _supabase.client
+          .from('invoices')
+          .select('total_amount')
+          .eq('user_id', userId)
+          .eq('status', 'draft');
+
+      final pendingTotal = pendingInvoices.fold<double>(0.0,
+          (sum, invoice) => sum + (invoice['total_amount'] as num).toDouble());
+
+      // Get monthly revenue (completed invoices)
+      final monthStart =
+          DateTime.now().toIso8601String().substring(0, 8) + '01';
+
+      final monthlyInvoices = await _supabase.client
+          .from('invoices')
+          .select('total_amount')
+          .eq('user_id', userId)
+          .eq('status', 'paid')
+          .gte('issue_date', monthStart);
+
+      final monthlyRevenue = monthlyInvoices.fold<double>(0.0,
+          (sum, invoice) => sum + (invoice['total_amount'] as num).toDouble());
 
       return {
-        'total': totalResponse.count ?? 0,
-        'thisMonth': thisMonthResponse.count ?? 0,
-        'recent': recentInspections
-            .map((i) => {
-                  'id': i.id,
-                  'clientName': i.clientName ?? 'Unknown Client',
-                  'propertyLocation': i.propertyLocation,
-                  'inspectionDate': i.inspectionDate.toIso8601String(),
-                })
-            .toList(),
+        'todayInspections': todayInspections.length,
+        'weeklyCompleted': weeklyInspections.length,
+        'pendingInvoicesCount': pendingInvoices.length,
+        'pendingInvoicesAmount': pendingTotal,
+        'monthlyRevenue': monthlyRevenue,
+        'monthlyInvoicesCount': monthlyInvoices.length,
       };
     } catch (error) {
-      return {
-        'total': 0,
-        'thisMonth': 0,
-        'recent': [],
-      };
+      throw Exception('Failed to load dashboard stats: $error');
     }
   }
 
-  // Get schedule statistics
-  Future<Map<String, dynamic>> _getScheduleStats() async {
+  // Get recent inspections
+  Future<List<Map<String, dynamic>>> getRecentInspections(
+      {int limit = 5}) async {
     try {
-      final todaySchedules = await ScheduleService.instance.getTodaySchedules();
-      final upcomingSchedules =
-          await ScheduleService.instance.getUpcomingSchedules(limit: 5);
+      final userId = _supabase.currentUserId!;
 
-      return {
-        'today': todaySchedules.length,
-        'upcoming': upcomingSchedules
-            .map((s) => {
-                  'id': s.id,
-                  'title': s.title,
-                  'clientName': s.clientName,
-                  'date': s.date.toIso8601String(),
-                  'time': s.time,
-                  'priority': s.priority,
-                })
-            .toList(),
-      };
-    } catch (error) {
-      return {
-        'today': 0,
-        'upcoming': [],
-      };
-    }
-  }
-
-  // Get invoice statistics
-  Future<Map<String, dynamic>> _getInvoiceStats() async {
-    try {
-      final invoiceStats = await InvoiceService.instance.getInvoiceStats();
-      return invoiceStats;
-    } catch (error) {
-      return {
-        'totalInvoices': 0,
-        'totalAmount': 0.0,
-        'paidAmount': 0.0,
-        'pendingAmount': 0.0,
-        'draftCount': 0,
-        'sentCount': 0,
-        'paidCount': 0,
-        'overdueCount': 0,
-      };
-    }
-  }
-
-  // Get recent activity
-  Future<List<Map<String, dynamic>>> _getRecentActivity() async {
-    final user = AuthService.instance.currentUser;
-    if (user == null) return [];
-
-    try {
-      final activities = <Map<String, dynamic>>[];
-
-      // Get recent inspections
-      final recentInspections = await _client
+      final inspections = await _supabase.client
           .from('inspections')
-          .select()
-          .eq('user_id', user.id)
+          .select('*')
+          .eq('user_id', userId)
           .order('created_at', ascending: false)
-          .limit(3);
+          .limit(limit);
 
+      return inspections;
+    } catch (error) {
+      throw Exception('Failed to load recent inspections: $error');
+    }
+  }
+
+  // Get recent invoices
+  Future<List<Map<String, dynamic>>> getRecentInvoices({int limit = 5}) async {
+    try {
+      final userId = _supabase.currentUserId!;
+
+      final invoices = await _supabase.client
+          .from('invoices')
+          .select('*')
+          .eq('user_id', userId)
+          .order('created_at', ascending: false)
+          .limit(limit);
+
+      return invoices;
+    } catch (error) {
+      throw Exception('Failed to load recent invoices: $error');
+    }
+  }
+
+  // Get upcoming schedules
+  Future<List<Map<String, dynamic>>> getUpcomingSchedules(
+      {int limit = 5}) async {
+    try {
+      final userId = _supabase.currentUserId!;
+      final today = DateTime.now().toIso8601String().split('T')[0];
+
+      final schedules = await _supabase.client
+          .from('schedules')
+          .select('*')
+          .eq('user_id', userId)
+          .gte('date', today)
+          .order('date', ascending: true)
+          .order('time', ascending: true)
+          .limit(limit);
+
+      return schedules;
+    } catch (error) {
+      throw Exception('Failed to load upcoming schedules: $error');
+    }
+  }
+
+  // Get activity feed
+  Future<List<Map<String, dynamic>>> getActivityFeed({int limit = 10}) async {
+    try {
+      final userId = _supabase.currentUserId!;
+
+      // Combine recent inspections, invoices, and schedules into activity feed
+      final recentInspections = await _supabase.client
+          .from('inspections')
+          .select('id, client_name, property_location, created_at')
+          .eq('user_id', userId)
+          .order('created_at', ascending: false)
+          .limit(5);
+
+      final recentInvoices = await _supabase.client
+          .from('invoices')
+          .select('id, client_name, total_amount, status, created_at')
+          .eq('user_id', userId)
+          .order('created_at', ascending: false)
+          .limit(5);
+
+      // Create activity feed items
+      List<Map<String, dynamic>> activities = [];
+
+      // Add inspections
       for (final inspection in recentInspections) {
         activities.add({
+          'id': inspection['id'],
           'type': 'inspection',
-          'title': 'Inspection Created',
-          'description': 'Property: ${inspection['property_location']}',
+          'title': 'Inspection for ${inspection['client_name']}',
+          'subtitle': inspection['property_location'],
           'timestamp': inspection['created_at'],
-          'icon': 'inspection',
+          'data': inspection,
         });
       }
 
-      // Get recent schedules
-      final recentSchedules = await _client
-          .from('schedules')
-          .select()
-          .eq('user_id', user.id)
-          .order('created_at', ascending: false)
-          .limit(2);
-
-      for (final schedule in recentSchedules) {
-        activities.add({
-          'type': 'schedule',
-          'title': 'Appointment Scheduled',
-          'description': 'Client: ${schedule['client_name']}',
-          'timestamp': schedule['created_at'],
-          'icon': 'calendar',
-        });
-      }
-
-      // Get recent invoices
-      final recentInvoices = await _client
-          .from('invoices')
-          .select()
-          .eq('user_id', user.id)
-          .order('created_at', ascending: false)
-          .limit(2);
-
+      // Add invoices
       for (final invoice in recentInvoices) {
         activities.add({
+          'id': invoice['id'],
           'type': 'invoice',
-          'title': 'Invoice Generated',
-          'description': 'Invoice: ${invoice['invoice_number']}',
+          'title': 'Invoice for ${invoice['client_name']}',
+          'subtitle':
+              'OMR ${(invoice['total_amount'] as num).toDouble().toStringAsFixed(2)} - ${invoice['status']}',
           'timestamp': invoice['created_at'],
-          'icon': 'document',
+          'data': invoice,
         });
       }
 
@@ -201,106 +177,55 @@ class DashboardService {
       activities.sort((a, b) => DateTime.parse(b['timestamp'])
           .compareTo(DateTime.parse(a['timestamp'])));
 
-      return activities.take(5).toList();
+      return activities.take(limit).toList();
     } catch (error) {
-      return [];
+      throw Exception('Failed to load activity feed: $error');
     }
   }
 
-  // Get monthly inspection trend
-  Future<List<Map<String, dynamic>>> getMonthlyInspectionTrend() async {
-    final user = AuthService.instance.currentUser;
-    if (user == null) return [];
-
+  // Get charts data for analytics
+  Future<Map<String, dynamic>> getChartsData() async {
     try {
+      final userId = _supabase.currentUserId!;
       final now = DateTime.now();
-      final months = <Map<String, dynamic>>[];
+      final startOfMonth = DateTime(now.year, now.month, 1);
 
-      for (int i = 5; i >= 0; i--) {
-        final monthDate = DateTime(now.year, now.month - i, 1);
-        final nextMonthDate = DateTime(now.year, now.month - i + 1, 1);
+      // Get daily inspection counts for current month
+      final monthlyInspections = await _supabase.client
+          .from('inspections')
+          .select('inspection_date')
+          .eq('user_id', userId)
+          .gte('inspection_date', startOfMonth.toIso8601String().split('T')[0]);
 
-        final response = await _client
-            .from('inspections')
-            .select()
-            .eq('user_id', user.id)
-            .gte('created_at', monthDate.toIso8601String())
-            .lt('created_at', nextMonthDate.toIso8601String())
-            .count();
-
-        months.add({
-          'month': monthDate.month,
-          'year': monthDate.year,
-          'count': response.count ?? 0,
-          'monthName': _getMonthName(monthDate.month),
-        });
+      // Group by day
+      Map<String, int> dailyCounts = {};
+      for (final inspection in monthlyInspections) {
+        final date = inspection['inspection_date'] as String;
+        dailyCounts[date] = (dailyCounts[date] ?? 0) + 1;
       }
 
-      return months;
-    } catch (error) {
-      return [];
-    }
-  }
+      // Get monthly revenue data
+      final monthlyRevenue = await _supabase.client
+          .from('invoices')
+          .select('issue_date, total_amount, status')
+          .eq('user_id', userId)
+          .eq('status', 'paid')
+          .gte('issue_date', startOfMonth.toIso8601String().split('T')[0]);
 
-  // Get inspection status distribution
-  Future<Map<String, int>> getInspectionStatusDistribution(
-      String inspectionId) async {
-    try {
-      final areas =
-          await InspectionService.instance.getInspectionAreas(inspectionId);
-
-      int passedCount = 0;
-      int failedCount = 0;
-      int naCount = 0;
-
-      for (final area in areas) {
-        final items =
-            await InspectionService.instance.getInspectionItems(area.id);
-        for (final item in items) {
-          switch (item.status?.toLowerCase()) {
-            case 'pass':
-              passedCount++;
-              break;
-            case 'fail':
-              failedCount++;
-              break;
-            case 'n/a':
-            default:
-              naCount++;
-              break;
-          }
-        }
+      Map<String, double> dailyRevenue = {};
+      for (final invoice in monthlyRevenue) {
+        final date = invoice['issue_date'] as String;
+        final amount = (invoice['total_amount'] as num).toDouble();
+        dailyRevenue[date] = (dailyRevenue[date] ?? 0.0) + amount;
       }
 
       return {
-        'passed': passedCount,
-        'failed': failedCount,
-        'na': naCount,
+        'dailyInspections': dailyCounts,
+        'dailyRevenue': dailyRevenue,
+        'monthStart': startOfMonth.toIso8601String().split('T')[0],
       };
     } catch (error) {
-      return {
-        'passed': 0,
-        'failed': 0,
-        'na': 0,
-      };
+      throw Exception('Failed to load charts data: $error');
     }
-  }
-
-  String _getMonthName(int month) {
-    const months = [
-      'Jan',
-      'Feb',
-      'Mar',
-      'Apr',
-      'May',
-      'Jun',
-      'Jul',
-      'Aug',
-      'Sep',
-      'Oct',
-      'Nov',
-      'Dec'
-    ];
-    return months[month - 1];
   }
 }

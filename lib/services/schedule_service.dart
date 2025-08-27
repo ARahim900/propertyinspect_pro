@@ -1,188 +1,285 @@
-import 'package:supabase_flutter/supabase_flutter.dart';
-
-import '../models/schedule.dart';
-import './auth_service.dart';
 import './supabase_service.dart';
 
 class ScheduleService {
-  static ScheduleService? _instance;
-  static ScheduleService get instance => _instance ??= ScheduleService._();
+  final SupabaseService _supabase = SupabaseService.instance;
 
-  ScheduleService._();
-
-  final SupabaseClient _client = SupabaseService.instance.client;
-
-  // Get all schedules for current user
-  Future<List<Schedule>> getSchedules() async {
-    final user = AuthService.instance.currentUser;
-    if (user == null) throw Exception('User not authenticated');
-
+  // Get schedules for current user
+  Future<List<Map<String, dynamic>>> getUserSchedules({
+    int? limit,
+    String? status,
+    DateTime? startDate,
+    DateTime? endDate,
+  }) async {
     try {
-      final response = await _client
+      var query = _supabase.client
           .from('schedules')
-          .select()
-          .eq('user_id', user.id)
-          .order('date', ascending: true)
-          .order('time', ascending: true);
+          .select('*')
+          .eq('user_id', _supabase.currentUserId!);
 
-      return response.map((json) => Schedule.fromJson(json)).toList();
+      if (status != null) {
+        query = query.eq('status', status);
+      }
+
+      if (startDate != null) {
+        query = query.gte('date', startDate.toIso8601String().split('T')[0]);
+      }
+
+      if (endDate != null) {
+        query = query.lte('date', endDate.toIso8601String().split('T')[0]);
+      }
+
+      var orderedQuery =
+          query.order('date', ascending: true).order('time', ascending: true);
+
+      if (limit != null) {
+        return await orderedQuery.limit(limit);
+      }
+
+      return await orderedQuery;
     } catch (error) {
-      throw Exception('Failed to get schedules: $error');
+      throw Exception('Failed to load schedules: $error');
     }
   }
 
-  // Get schedules for a specific date
-  Future<List<Schedule>> getSchedulesByDate(DateTime date) async {
-    final user = AuthService.instance.currentUser;
-    if (user == null) throw Exception('User not authenticated');
-
-    final dateString = date.toIso8601String().split('T')[0];
-
+  // Get single schedule details
+  Future<Map<String, dynamic>> getScheduleDetails(String scheduleId) async {
     try {
-      final response = await _client
+      final response = await _supabase.client
           .from('schedules')
-          .select()
-          .eq('user_id', user.id)
-          .eq('date', dateString)
-          .order('time', ascending: true);
+          .select('*')
+          .eq('id', scheduleId)
+          .single();
 
-      return response.map((json) => Schedule.fromJson(json)).toList();
+      return response;
     } catch (error) {
-      throw Exception('Failed to get schedules for date: $error');
-    }
-  }
-
-  // Get upcoming schedules
-  Future<List<Schedule>> getUpcomingSchedules({int limit = 10}) async {
-    final user = AuthService.instance.currentUser;
-    if (user == null) throw Exception('User not authenticated');
-
-    final today = DateTime.now().toIso8601String().split('T')[0];
-
-    try {
-      final response = await _client
-          .from('schedules')
-          .select()
-          .eq('user_id', user.id)
-          .gte('date', today)
-          .order('date', ascending: true)
-          .order('time', ascending: true)
-          .limit(limit);
-
-      return response.map((json) => Schedule.fromJson(json)).toList();
-    } catch (error) {
-      throw Exception('Failed to get upcoming schedules: $error');
+      throw Exception('Failed to load schedule details: $error');
     }
   }
 
   // Create new schedule
-  Future<Schedule> createSchedule(Map<String, dynamic> data) async {
-    final user = AuthService.instance.currentUser;
-    if (user == null) throw Exception('User not authenticated');
-
-    data['user_id'] = user.id;
-
+  Future<Map<String, dynamic>> createSchedule({
+    required String title,
+    required DateTime date,
+    required String time,
+    required String clientName,
+    String? clientEmail,
+    String? clientPhone,
+    String? propertyLocation,
+    String? propertyType,
+    int duration = 60,
+    String priority = 'medium',
+    String? notes,
+  }) async {
     try {
-      final response =
-          await _client.from('schedules').insert(data).select().single();
+      final scheduleData = {
+        'user_id': _supabase.currentUserId,
+        'title': title,
+        'date': date.toIso8601String().split('T')[0],
+        'time': time,
+        'client_name': clientName,
+        'client_email': clientEmail,
+        'client_phone': clientPhone,
+        'property_location': propertyLocation,
+        'property_type': propertyType,
+        'duration': duration,
+        'priority': priority,
+        'notes': notes,
+        'status': 'scheduled',
+      };
 
-      return Schedule.fromJson(response);
+      final response = await _supabase.client
+          .from('schedules')
+          .insert(scheduleData)
+          .select()
+          .single();
+
+      return response;
     } catch (error) {
       throw Exception('Failed to create schedule: $error');
     }
   }
 
   // Update schedule
-  Future<Schedule> updateSchedule(String id, Map<String, dynamic> data) async {
+  Future<Map<String, dynamic>> updateSchedule(
+    String scheduleId,
+    Map<String, dynamic> updateData,
+  ) async {
     try {
-      final response = await _client
+      // Add updated timestamp
+      updateData['updated_at'] = DateTime.now().toIso8601String();
+
+      final response = await _supabase.client
           .from('schedules')
-          .update(data)
-          .eq('id', id)
+          .update(updateData)
+          .eq('id', scheduleId)
           .select()
           .single();
 
-      return Schedule.fromJson(response);
+      return response;
     } catch (error) {
       throw Exception('Failed to update schedule: $error');
     }
   }
 
-  // Delete schedule
-  Future<void> deleteSchedule(String id) async {
+  // Update schedule status
+  Future<void> updateScheduleStatus(String scheduleId, String status) async {
     try {
-      await _client.from('schedules').delete().eq('id', id);
+      await _supabase.client
+          .from('schedules')
+          .update({'status': status}).eq('id', scheduleId);
+    } catch (error) {
+      throw Exception('Failed to update schedule status: $error');
+    }
+  }
+
+  // Delete schedule
+  Future<void> deleteSchedule(String scheduleId) async {
+    try {
+      await _supabase.client.from('schedules').delete().eq('id', scheduleId);
     } catch (error) {
       throw Exception('Failed to delete schedule: $error');
     }
   }
 
-  // Get schedule by ID
-  Future<Schedule> getScheduleById(String id) async {
+  // Get schedules for specific date
+  Future<List<Map<String, dynamic>>> getSchedulesForDate(DateTime date) async {
     try {
-      final response =
-          await _client.from('schedules').select().eq('id', id).single();
+      final dateString = date.toIso8601String().split('T')[0];
 
-      return Schedule.fromJson(response);
-    } catch (error) {
-      throw Exception('Failed to get schedule: $error');
-    }
-  }
-
-  // Filter schedules
-  Future<List<Schedule>> filterSchedules({
-    String? status,
-    String? priority,
-    DateTime? startDate,
-    DateTime? endDate,
-  }) async {
-    final user = AuthService.instance.currentUser;
-    if (user == null) throw Exception('User not authenticated');
-
-    try {
-      var query = _client.from('schedules').select().eq('user_id', user.id);
-
-      if (status != null) {
-        query = query.eq('status', status);
-      }
-
-      if (priority != null) {
-        query = query.eq('priority', priority);
-      }
-
-      if (startDate != null) {
-        final startDateString = startDate.toIso8601String().split('T')[0];
-        query = query.gte('date', startDateString);
-      }
-
-      if (endDate != null) {
-        final endDateString = endDate.toIso8601String().split('T')[0];
-        query = query.lte('date', endDateString);
-      }
-
-      final response = await query
-          .order('date', ascending: true)
+      final schedules = await _supabase.client
+          .from('schedules')
+          .select('*')
+          .eq('user_id', _supabase.currentUserId!)
+          .eq('date', dateString)
           .order('time', ascending: true);
 
-      return response.map((json) => Schedule.fromJson(json)).toList();
+      return schedules;
     } catch (error) {
-      throw Exception('Failed to filter schedules: $error');
+      throw Exception('Failed to load schedules for date: $error');
     }
   }
 
-  // Get today's schedules for dashboard
-  Future<List<Schedule>> getTodaySchedules() async {
-    final today = DateTime.now();
-    return await getSchedulesByDate(today);
+  // Get upcoming schedules
+  Future<List<Map<String, dynamic>>> getUpcomingSchedules(
+      {int limit = 10}) async {
+    try {
+      final today = DateTime.now().toIso8601String().split('T')[0];
+
+      final schedules = await _supabase.client
+          .from('schedules')
+          .select('*')
+          .eq('user_id', _supabase.currentUserId!)
+          .gte('date', today)
+          .eq('status', 'scheduled')
+          .order('date', ascending: true)
+          .order('time', ascending: true)
+          .limit(limit);
+
+      return schedules;
+    } catch (error) {
+      throw Exception('Failed to load upcoming schedules: $error');
+    }
   }
 
-  // Mark schedule as completed
-  Future<Schedule> markAsCompleted(String id) async {
-    return await updateSchedule(id, {'status': 'completed'});
+  // Get schedules statistics
+  Future<Map<String, dynamic>> getScheduleStats() async {
+    try {
+      final userId = _supabase.currentUserId!;
+      final today = DateTime.now().toIso8601String().split('T')[0];
+      final weekStart = DateTime.now()
+          .subtract(Duration(days: 7))
+          .toIso8601String()
+          .split('T')[0];
+
+      // Today's schedules
+      final todaySchedules = await _supabase.client
+          .from('schedules')
+          .select('*')
+          .eq('user_id', userId)
+          .eq('date', today);
+
+      // This week's schedules
+      final weekSchedules = await _supabase.client
+          .from('schedules')
+          .select('*')
+          .eq('user_id', userId)
+          .gte('date', weekStart);
+
+      // Pending schedules (upcoming)
+      final pendingSchedules = await _supabase.client
+          .from('schedules')
+          .select('*')
+          .eq('user_id', userId)
+          .gte('date', today)
+          .eq('status', 'scheduled');
+
+      // Completed schedules this month
+      final monthStart =
+          DateTime.now().toIso8601String().substring(0, 8) + '01';
+      final completedSchedules = await _supabase.client
+          .from('schedules')
+          .select('*')
+          .eq('user_id', userId)
+          .gte('date', monthStart)
+          .eq('status', 'completed');
+
+      return {
+        'todayCount': todaySchedules.length,
+        'weekCount': weekSchedules.length,
+        'pendingCount': pendingSchedules.length,
+        'completedThisMonth': completedSchedules.length,
+      };
+    } catch (error) {
+      throw Exception('Failed to load schedule stats: $error');
+    }
   }
 
-  // Mark schedule as cancelled
-  Future<Schedule> markAsCancelled(String id) async {
-    return await updateSchedule(id, {'status': 'cancelled'});
+  // Search schedules
+  Future<List<Map<String, dynamic>>> searchSchedules(String query) async {
+    try {
+      // Search in title, client name, and property location
+      final schedules = await _supabase.client
+          .from('schedules')
+          .select('*')
+          .eq('user_id', _supabase.currentUserId!)
+          .or('title.ilike.%$query%,client_name.ilike.%$query%,property_location.ilike.%$query%')
+          .order('date', ascending: false);
+
+      return schedules;
+    } catch (error) {
+      throw Exception('Failed to search schedules: $error');
+    }
+  }
+
+  // Convert schedule to inspection
+  Future<Map<String, dynamic>> convertScheduleToInspection(
+      String scheduleId) async {
+    try {
+      final schedule = await getScheduleDetails(scheduleId);
+
+      // Create inspection from schedule data
+      final inspectionData = {
+        'user_id': _supabase.currentUserId,
+        'client_name': schedule['client_name'],
+        'property_location': schedule['property_location'] ?? 'Not specified',
+        'property_type': schedule['property_type'] ?? 'residential',
+        'inspector_name':
+            'Inspector', // You might want to get this from user profile
+        'inspection_date': schedule['date'],
+      };
+
+      final inspection = await _supabase.client
+          .from('inspections')
+          .insert(inspectionData)
+          .select()
+          .single();
+
+      // Update schedule status
+      await updateScheduleStatus(scheduleId, 'completed');
+
+      return inspection;
+    } catch (error) {
+      throw Exception('Failed to convert schedule to inspection: $error');
+    }
   }
 }

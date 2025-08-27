@@ -1,137 +1,167 @@
-/// Layout constants for consistent spacing and sizing throughout the application
+import 'package:sizer/sizer.dart';
+
+/// Layout constants for consistent spacing and sizing throughout the app
 class LayoutConstants {
-  LayoutConstants._();
+  // Spacing Constants
+  static double get tinySpacing => 0.5.h;
+  static double get smallSpacing => 1.h;
+  static double get mediumSpacing => 2.h;
+  static double get largeSpacing => 3.h;
+  static double get extraLargeSpacing => 4.h;
 
-  // Spacing constants
-  static const double spacingXs = 4.0;
-  static const double spacingSm = 8.0;
-  static const double spacingMd = 16.0;
-  static const double spacingLg = 24.0;
-  static const double spacingXl = 32.0;
-  static const double spacingXxl = 48.0;
+  // Padding Constants
+  static double get tinyPadding => 1.w;
+  static double get smallPadding => 2.w;
+  static double get mediumPadding => 4.w;
+  static double get largePadding => 6.w;
+  static double get extraLargePadding => 8.w;
 
-  // Padding constants
-  static const double paddingXs = 4.0;
-  static const double paddingSm = 8.0;
-  static const double paddingMd = 16.0;
-  static const double paddingLg = 20.0;
-  static const double paddingXl = 24.0;
-  static const double paddingXxl = 32.0;
+  // Border Radius Constants
+  static double get smallRadius => 1.w;
+  static double get mediumRadius => 2.w;
+  static double get largeRadius => 3.w;
+  static double get extraLargeRadius => 4.w;
+  static double get circularRadius => 50.w;
 
-  // Border radius constants
-  static const double radiusXs = 4.0;
-  static const double radiusSm = 8.0;
-  static const double radiusMd = 12.0;
-  static const double radiusLg = 16.0;
-  static const double radiusXl = 20.0;
-  static const double radiusRound = 999.0;
+  // Card Constants
+  static double get cardElevation => 2.0;
+  static double get cardRadius => 2.w;
+  static double get cardPadding => 4.w;
+  static double get cardMargin => 2.w;
 
-  // Icon sizes
-  static const double iconXs = 12.0;
-  static const double iconSm = 16.0;
-  static const double iconMd = 20.0;
-  static const double iconLg = 24.0;
-  static const double iconXl = 32.0;
-  static const double iconXxl = 48.0;
+  // Button Constants
+  static double get buttonHeight => 6.h;
+  static double get buttonRadius => 2.w;
+  static double get buttonPadding => 4.w;
+  static double get iconButtonSize => 12.w;
 
-  // Card dimensions
-  static const double cardElevation = 2.0;
-  static const double cardElevationHover = 4.0;
-  static const double cardMinHeight = 120.0;
-  static const double cardMaxWidth = 400.0;
+  // Icon Constants
+  static double get smallIcon => 4.w;
+  static double get mediumIcon => 5.w;
+  static double get largeIcon => 6.w;
+  static double get extraLargeIcon => 8.w;
 
-  // Button dimensions
-  static const double buttonHeight = 48.0;
-  static const double buttonHeightSm = 36.0;
-  static const double buttonHeightLg = 56.0;
-  static const double buttonMinWidth = 88.0;
+  // Text Field Constants
+  static double get textFieldHeight => 6.h;
+  static double get textFieldRadius => 2.w;
+  static double get textFieldPadding => 3.w;
 
-  // Input field dimensions
-  static const double inputHeight = 48.0;
-  static const double inputHeightSm = 36.0;
-  static const double inputHeightLg = 56.0;
+  // App Bar Constants
+  static double get appBarHeight => 8.h;
+  static double get appBarIconSize => 6.w;
+  static double get appBarElevation => 2.0;
 
-  // App bar dimensions
-  static const double appBarHeight = 56.0;
-  static const double appBarHeightLg = 64.0;
+  // Bottom Navigation Constants
+  static double get bottomNavHeight => 8.h;
+  static double get bottomNavIconSize => 6.w;
+  static double get bottomNavElevation => 4.0;
 
-  // Bottom navigation dimensions
-  static const double bottomNavHeight = 80.0;
-  static const double bottomNavIconSize = 24.0;
+  // List Item Constants
+  static double get listItemHeight => 8.h;
+  static double get listItemPadding => 4.w;
+  static double get listItemRadius => 2.w;
 
-  // FAB dimensions
-  static const double fabSize = 56.0;
-  static const double fabSizeSm = 40.0;
-  static const double fabSizeLg = 64.0;
+  // Modal Constants
+  static double get modalRadius => 4.w;
+  static double get modalPadding => 6.w;
+  static double get modalSpacing => 3.h;
 
-  // List item dimensions
-  static const double listItemHeight = 72.0;
-  static const double listItemHeightSm = 56.0;
-  static const double listItemHeightLg = 88.0;
+  // Image Constants
+  static double get avatarRadius => 6.w;
+  static double get thumbnailSize => 15.w;
+  static double get imageRadius => 2.w;
 
-  // Avatar dimensions
-  static const double avatarSm = 32.0;
-  static const double avatarMd = 40.0;
-  static const double avatarLg = 56.0;
-  static const double avatarXl = 72.0;
+  // Container Constants
+  static double get containerMinHeight => 20.h;
+  static double get containerPadding => 4.w;
+  static double get containerMargin => 2.h;
 
-  // Screen breakpoints
-  static const double breakpointSm = 600.0;
-  static const double breakpointMd = 960.0;
-  static const double breakpointLg = 1280.0;
-  static const double breakpointXl = 1920.0;
+  // Grid Constants
+  static double get gridSpacing => 2.w;
+  static double get gridPadding => 4.w;
+  static int get gridCrossAxisCount => 2;
+  static double get gridChildAspectRatio => 0.8;
 
-  // Content max widths
-  static const double contentMaxWidthSm = 600.0;
-  static const double contentMaxWidthMd = 960.0;
-  static const double contentMaxWidthLg = 1200.0;
+  // Shadow Constants
+  static double get shadowBlurRadius => 8.0;
+  static double get shadowSpreadRadius => 0.0;
+  static double get shadowOpacity => 0.1;
 
-  // Animation durations
-  static const Duration animationFast = Duration(milliseconds: 150);
-  static const Duration animationNormal = Duration(milliseconds: 300);
-  static const Duration animationSlow = Duration(milliseconds: 500);
+  // Animation Constants
+  static int get animationDurationFast => 150;
+  static int get animationDurationMedium => 300;
+  static int get animationDurationSlow => 500;
 
-  // Opacity values
-  static const double opacityDisabled = 0.38;
-  static const double opacityMedium = 0.6;
-  static const double opacityHigh = 0.87;
+  // Breakpoints for responsive design
+  static double get mobileBreakpoint => 480.0;
+  static double get tabletBreakpoint => 768.0;
+  static double get desktopBreakpoint => 1024.0;
 
-  // Shadow values
-  static const double shadowBlurRadius = 8.0;
-  static const double shadowSpreadRadius = 0.0;
-  static const Offset shadowOffset = Offset(0, 2);
+  // Touch targets (minimum 44pt for accessibility)
+  static double get minimumTouchTarget => 44.0;
+  static double get recommendedTouchTarget => 48.0;
 
-  // Grid spacing
-  static const double gridSpacing = 16.0;
-  static const double gridSpacingSm = 8.0;
-  static const double gridSpacingLg = 24.0;
+  // Content constraints
+  static double get maxContentWidth => 400.0;
+  static double get maxCardWidth => 350.0;
+  static double get maxFormWidth => 320.0;
 
-  // Safe area padding
-  static const double safeAreaPadding = 16.0;
-  static const double safeAreaPaddingBottom = 24.0;
+  // Helper methods for responsive spacing
+  static double responsiveSpacing(double factor) => factor.h;
+  static double responsivePadding(double factor) => factor.w;
+  static double responsiveIcon(double factor) => factor.w;
+  static double responsiveFont(double factor) => factor.sp;
 
-  // Responsive helpers
-  static bool isSmallScreen(double width) => width < breakpointSm;
-  static bool isMediumScreen(double width) => width >= breakpointSm && width < breakpointMd;
-  static bool isLargeScreen(double width) => width >= breakpointMd;
+  // Common edge insets
+  static EdgeInsets get tinyInsets => EdgeInsets.all(tinyPadding);
+  static EdgeInsets get smallInsets => EdgeInsets.all(smallPadding);
+  static EdgeInsets get mediumInsets => EdgeInsets.all(mediumPadding);
+  static EdgeInsets get largeInsets => EdgeInsets.all(largePadding);
 
-  // Responsive padding
-  static double getResponsivePadding(double screenWidth) {
-    if (isSmallScreen(screenWidth)) return paddingMd;
-    if (isMediumScreen(screenWidth)) return paddingLg;
-    return paddingXl;
+  static EdgeInsets get horizontalSmall =>
+      EdgeInsets.symmetric(horizontal: smallPadding);
+  static EdgeInsets get horizontalMedium =>
+      EdgeInsets.symmetric(horizontal: mediumPadding);
+  static EdgeInsets get horizontalLarge =>
+      EdgeInsets.symmetric(horizontal: largePadding);
+
+  static EdgeInsets get verticalSmall =>
+      EdgeInsets.symmetric(vertical: smallSpacing);
+  static EdgeInsets get verticalMedium =>
+      EdgeInsets.symmetric(vertical: mediumSpacing);
+  static EdgeInsets get verticalLarge =>
+      EdgeInsets.symmetric(vertical: largeSpacing);
+
+  // Common border radius
+  static BorderRadius get smallBorderRadius =>
+      BorderRadius.circular(smallRadius);
+  static BorderRadius get mediumBorderRadius =>
+      BorderRadius.circular(mediumRadius);
+  static BorderRadius get largeBorderRadius =>
+      BorderRadius.circular(largeRadius);
+  static BorderRadius get circularBorderRadius =>
+      BorderRadius.circular(circularRadius);
+
+  // Card decoration
+  static BoxDecoration cardDecoration({
+    Color? color,
+    Color? shadowColor,
+    double? elevation,
+    BorderRadius? borderRadius,
+  }) {
+    return BoxDecoration(
+      color: color,
+      borderRadius: borderRadius ?? mediumBorderRadius,
+      boxShadow: [
+        BoxShadow(
+          color: (shadowColor ?? Colors.black).withValues(
+            alpha: elevation != null ? (elevation * 0.05) : shadowOpacity,
+          ),
+          blurRadius: elevation != null ? (elevation * 2) : shadowBlurRadius,
+          spreadRadius: shadowSpreadRadius,
+          offset: Offset(0, elevation != null ? elevation : 2),
+        ),
+      ],
+    );
   }
-
-  // Responsive spacing
-  static double getResponsiveSpacing(double screenWidth) {
-    if (isSmallScreen(screenWidth)) return spacingMd;
-    if (isMediumScreen(screenWidth)) return spacingLg;
-    return spacingXl;
-  }
-
-  // Card aspect ratios
-  static const double cardAspectRatioSquare = 1.0;
-  static const double cardAspectRatioWide = 16 / 9;
-  static const double cardAspectRatioTall = 3 / 4;
-  static const double cardAspectRatioMetric = 0.85; // Optimized for metric cards
 }

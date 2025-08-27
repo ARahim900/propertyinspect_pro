@@ -1,369 +1,286 @@
-import 'package:supabase_flutter/supabase_flutter.dart';
-
-import '../models/invoice.dart';
-import './auth_service.dart';
+import '../utils/currency_helper.dart';
 import './supabase_service.dart';
 
 class InvoiceService {
-  static InvoiceService? _instance;
-  static InvoiceService get instance => _instance ??= InvoiceService._();
+  final SupabaseService _supabase = SupabaseService.instance;
 
-  InvoiceService._();
-
-  final SupabaseClient _client = SupabaseService.instance.client;
-
-  // Get all invoices for current user
-  Future<List<Invoice>> getInvoices() async {
-    final user = AuthService.instance.currentUser;
-    if (user == null) throw Exception('User not authenticated');
-
+  // Get invoices for current user
+  Future<List<Map<String, dynamic>>> getUserInvoices({
+    int? limit,
+    String? status,
+  }) async {
     try {
-      final response = await _client
+      var query = _supabase.client
           .from('invoices')
-          .select()
-          .eq('user_id', user.id)
-          .order('created_at', ascending: false);
+          .select('*, invoice_services(*)')
+          .eq('user_id', _supabase.currentUserId!);
 
-      return response.map((json) => Invoice.fromJson(json)).toList();
+      if (status != null) {
+        query = query.eq('status', status);
+      }
+
+      var orderedQuery = query.order('created_at', ascending: false);
+
+      if (limit != null) {
+        return await orderedQuery.limit(limit);
+      }
+
+      return await orderedQuery;
     } catch (error) {
-      throw Exception('Failed to get invoices: $error');
+      throw Exception('Failed to load invoices: $error');
     }
   }
 
-  // Get invoice by ID
-  Future<Invoice> getInvoiceById(String id) async {
+  // Get single invoice with services
+  Future<Map<String, dynamic>> getInvoiceDetails(String invoiceId) async {
     try {
-      final response =
-          await _client.from('invoices').select().eq('id', id).single();
+      final response = await _supabase.client
+          .from('invoices')
+          .select('*, invoice_services(*)')
+          .eq('id', invoiceId)
+          .single();
 
-      return Invoice.fromJson(response);
+      return response;
     } catch (error) {
-      throw Exception('Failed to get invoice: $error');
+      throw Exception('Failed to load invoice details: $error');
     }
   }
 
   // Create new invoice
-  Future<Invoice> createInvoice(Map<String, dynamic> data) async {
-    final user = AuthService.instance.currentUser;
-    if (user == null) throw Exception('User not authenticated');
-
-    data['user_id'] = user.id;
-
-    // Generate invoice number if not provided
-    if (!data.containsKey('invoice_number') || data['invoice_number'] == null) {
-      data['invoice_number'] = await _generateInvoiceNumber();
-    }
-
+  Future<Map<String, dynamic>> createInvoice({
+    required String clientName,
+    required String clientEmail,
+    String? clientPhone,
+    required String propertyLocation,
+    String? propertyType,
+    String? inspectionId,
+    DateTime? inspectionDate,
+    List<Map<String, dynamic>>? services,
+  }) async {
     try {
-      final response =
-          await _client.from('invoices').insert(data).select().single();
+      // Generate unique invoice number
+      final invoiceNumber = 'INV-${DateTime.now().millisecondsSinceEpoch}';
 
-      return Invoice.fromJson(response);
+      final invoiceData = {
+        'user_id': _supabase.currentUserId,
+        'invoice_number': invoiceNumber,
+        'client_name': clientName,
+        'client_email': clientEmail,
+        'client_phone': clientPhone,
+        'property_location': propertyLocation,
+        'property_type': propertyType ?? 'residential',
+        'inspection_id': inspectionId,
+        'inspection_date': inspectionDate?.toIso8601String().split('T')[0],
+        'issue_date': DateTime.now().toIso8601String().split('T')[0],
+        'due_date': DateTime.now()
+            .add(Duration(days: 30))
+            .toIso8601String()
+            .split('T')[0],
+        'status': 'draft',
+        'amount': 0.0,
+        'tax': 0.0,
+        'total_amount': 0.0,
+      };
+
+      final invoice = await _supabase.client
+          .from('invoices')
+          .insert(invoiceData)
+          .select()
+          .single();
+
+      // Add services if provided
+      if (services != null && services.isNotEmpty) {
+        await addInvoiceServices(invoice['id'], services);
+      }
+
+      return invoice;
     } catch (error) {
       throw Exception('Failed to create invoice: $error');
     }
   }
 
-  // Update invoice
-  Future<Invoice> updateInvoice(String id, Map<String, dynamic> data) async {
+  // Add services to invoice
+  Future<void> addInvoiceServices(
+      String invoiceId, List<Map<String, dynamic>> services) async {
     try {
-      final response = await _client
-          .from('invoices')
-          .update(data)
-          .eq('id', id)
-          .select()
-          .single();
-
-      return Invoice.fromJson(response);
-    } catch (error) {
-      throw Exception('Failed to update invoice: $error');
-    }
-  }
-
-  // Delete invoice
-  Future<void> deleteInvoice(String id) async {
-    try {
-      await _client.from('invoices').delete().eq('id', id);
-    } catch (error) {
-      throw Exception('Failed to delete invoice: $error');
-    }
-  }
-
-  // Get invoice services
-  Future<List<InvoiceServiceModel>> getInvoiceServices(String invoiceId) async {
-    try {
-      final response = await _client
-          .from('invoice_services')
-          .select()
-          .eq('invoice_id', invoiceId)
-          .order('created_at', ascending: true);
-
-      return response
-          .map((json) => InvoiceServiceModel.fromJson(json))
+      final serviceData = services
+          .map((service) => {
+                'invoice_id': invoiceId,
+                'description': service['description'],
+                'quantity': service['quantity'] ?? 1.0,
+                'rate': service['rate'] ?? 0.0,
+                'amount':
+                    (service['quantity'] ?? 1.0) * (service['rate'] ?? 0.0),
+              })
           .toList();
-    } catch (error) {
-      throw Exception('Failed to get invoice services: $error');
-    }
-  }
 
-  // Add service to invoice
-  Future<InvoiceServiceModel> addInvoiceService(
-      Map<String, dynamic> data) async {
-    try {
-      // Calculate amount if not provided
-      if (!data.containsKey('amount')) {
-        final quantity = (data['quantity'] ?? 1).toDouble();
-        final rate = (data['rate'] ?? 0).toDouble();
-        data['amount'] = quantity * rate;
-      }
-
-      final response =
-          await _client.from('invoice_services').insert(data).select().single();
+      await _supabase.client.from('invoice_services').insert(serviceData);
 
       // Update invoice totals
-      await _updateInvoiceTotals(data['invoice_id']);
-
-      return InvoiceServiceModel.fromJson(response);
+      await _updateInvoiceTotals(invoiceId);
     } catch (error) {
-      throw Exception('Failed to add invoice service: $error');
+      throw Exception('Failed to add invoice services: $error');
     }
   }
 
   // Update invoice service
-  Future<InvoiceServiceModel> updateInvoiceService(
-      String id, Map<String, dynamic> data) async {
+  Future<void> updateInvoiceService(
+    String serviceId, {
+    String? description,
+    double? quantity,
+    double? rate,
+  }) async {
     try {
+      final updateData = <String, dynamic>{};
+
+      if (description != null) updateData['description'] = description;
+      if (quantity != null) updateData['quantity'] = quantity;
+      if (rate != null) updateData['rate'] = rate;
+
       // Calculate amount if quantity or rate changed
-      if (data.containsKey('quantity') || data.containsKey('rate')) {
-        final service = await _getInvoiceServiceById(id);
-        final quantity = (data['quantity'] ?? service.quantity).toDouble();
-        final rate = (data['rate'] ?? service.rate).toDouble();
-        data['amount'] = quantity * rate;
+      if (quantity != null || rate != null) {
+        final service = await _supabase.client
+            .from('invoice_services')
+            .select('quantity, rate')
+            .eq('id', serviceId)
+            .single();
+
+        final newQuantity = quantity ?? service['quantity'];
+        final newRate = rate ?? service['rate'];
+        updateData['amount'] = newQuantity * newRate;
       }
 
-      final response = await _client
+      await _supabase.client
           .from('invoice_services')
-          .update(data)
-          .eq('id', id)
-          .select()
-          .single();
-
-      final service = InvoiceServiceModel.fromJson(response);
+          .update(updateData)
+          .eq('id', serviceId);
 
       // Update invoice totals
-      await _updateInvoiceTotals(service.invoiceId);
+      final service = await _supabase.client
+          .from('invoice_services')
+          .select('invoice_id')
+          .eq('id', serviceId)
+          .single();
 
-      return service;
+      await _updateInvoiceTotals(service['invoice_id']);
     } catch (error) {
       throw Exception('Failed to update invoice service: $error');
     }
   }
 
   // Delete invoice service
-  Future<void> deleteInvoiceService(String id) async {
+  Future<void> deleteInvoiceService(String serviceId) async {
     try {
-      final service = await _getInvoiceServiceById(id);
+      final service = await _supabase.client
+          .from('invoice_services')
+          .select('invoice_id')
+          .eq('id', serviceId)
+          .single();
 
-      await _client.from('invoice_services').delete().eq('id', id);
+      await _supabase.client
+          .from('invoice_services')
+          .delete()
+          .eq('id', serviceId);
 
       // Update invoice totals
-      await _updateInvoiceTotals(service.invoiceId);
+      await _updateInvoiceTotals(service['invoice_id']);
     } catch (error) {
       throw Exception('Failed to delete invoice service: $error');
     }
   }
 
-  // Filter invoices by status
-  Future<List<Invoice>> getInvoicesByStatus(String status) async {
-    final user = AuthService.instance.currentUser;
-    if (user == null) throw Exception('User not authenticated');
-
-    try {
-      final response = await _client
-          .from('invoices')
-          .select()
-          .eq('user_id', user.id)
-          .eq('status', status)
-          .order('created_at', ascending: false);
-
-      return response.map((json) => Invoice.fromJson(json)).toList();
-    } catch (error) {
-      throw Exception('Failed to get invoices by status: $error');
-    }
-  }
-
-  // Mark invoice as sent
-  Future<Invoice> markAsSent(String id) async {
-    return await updateInvoice(id, {'status': 'sent'});
-  }
-
-  // Mark invoice as paid
-  Future<Invoice> markAsPaid(String id,
-      {String? paymentMethod, DateTime? paymentDate}) async {
-    final data = {
-      'status': 'paid',
-      'payment_date':
-          (paymentDate ?? DateTime.now()).toIso8601String().split('T')[0],
-    };
-
-    if (paymentMethod != null) {
-      data['payment_method'] = paymentMethod;
-    }
-
-    return await updateInvoice(id, data);
-  }
-
-  // Get invoice statistics for dashboard
-  Future<Map<String, dynamic>> getInvoiceStats() async {
-    final user = AuthService.instance.currentUser;
-    if (user == null) throw Exception('User not authenticated');
-
-    try {
-      final allInvoices = await getInvoices();
-
-      double totalAmount = 0;
-      double paidAmount = 0;
-      double pendingAmount = 0;
-      int draftCount = 0;
-      int sentCount = 0;
-      int paidCount = 0;
-      int overdueCount = 0;
-
-      for (final invoice in allInvoices) {
-        totalAmount += invoice.totalAmount;
-
-        switch (invoice.status) {
-          case 'draft':
-            draftCount++;
-            break;
-          case 'sent':
-            sentCount++;
-            pendingAmount += invoice.totalAmount;
-            break;
-          case 'paid':
-            paidCount++;
-            paidAmount += invoice.totalAmount;
-            break;
-          case 'overdue':
-            overdueCount++;
-            pendingAmount += invoice.totalAmount;
-            break;
-        }
-      }
-
-      return {
-        'totalInvoices': allInvoices.length,
-        'totalAmount': totalAmount,
-        'paidAmount': paidAmount,
-        'pendingAmount': pendingAmount,
-        'draftCount': draftCount,
-        'sentCount': sentCount,
-        'paidCount': paidCount,
-        'overdueCount': overdueCount,
-      };
-    } catch (error) {
-      throw Exception('Failed to get invoice stats: $error');
-    }
-  }
-
-  // Private methods
-  Future<String> _generateInvoiceNumber() async {
-    final user = AuthService.instance.currentUser;
-    if (user == null) throw Exception('User not authenticated');
-
-    final now = DateTime.now();
-    final year = now.year.toString();
-    final month = now.month.toString().padLeft(2, '0');
-
-    try {
-      final count = await _client
-          .from('invoices')
-          .select()
-          .eq('user_id', user.id)
-          .count();
-
-      final invoiceNumber =
-          'INV-$year$month-${(count.count + 1).toString().padLeft(3, '0')}';
-      return invoiceNumber;
-    } catch (error) {
-      final timestamp = now.millisecondsSinceEpoch.toString().substring(8);
-      return 'INV-$year$month-$timestamp';
-    }
-  }
-
-  Future<InvoiceServiceModel> _getInvoiceServiceById(String id) async {
-    final response =
-        await _client.from('invoice_services').select().eq('id', id).single();
-
-    return InvoiceServiceModel.fromJson(response);
-  }
-
+  // Update invoice totals based on services
   Future<void> _updateInvoiceTotals(String invoiceId) async {
     try {
-      final services = await getInvoiceServices(invoiceId);
-      final subtotal =
-          services.fold<double>(0, (sum, service) => sum + service.amount);
+      final services = await _supabase.client
+          .from('invoice_services')
+          .select('amount')
+          .eq('invoice_id', invoiceId);
 
-      final invoice = await getInvoiceById(invoiceId);
-      final taxRate = invoice.tax > 0
-          ? invoice.tax / (invoice.amount > 0 ? invoice.amount : 1)
-          : 0.0;
+      final subtotal = services.fold<double>(
+          0.0, (sum, service) => sum + (service['amount'] as num).toDouble());
+
+      // Calculate tax (using 5% VAT for Oman)
+      const taxRate = 0.05;
       final tax = subtotal * taxRate;
       final total = subtotal + tax;
 
-      await updateInvoice(invoiceId, {
+      await _supabase.client.from('invoices').update({
         'amount': subtotal,
         'tax': tax,
         'total_amount': total,
-      });
+      }).eq('id', invoiceId);
     } catch (error) {
-      // Ignore errors in total calculation
+      throw Exception('Failed to update invoice totals: $error');
     }
   }
-}
 
-// Rename to avoid conflict
-class InvoiceServiceModel {
-  final String id;
-  final String invoiceId;
-  final String description;
-  final double quantity;
-  final double rate;
-  final double amount;
-  final DateTime createdAt;
+  // Update invoice status
+  Future<void> updateInvoiceStatus(String invoiceId, String status) async {
+    try {
+      final updateData = {
+        'status': status,
+        'updated_at': DateTime.now().toIso8601String(),
+      };
 
-  InvoiceServiceModel({
-    required this.id,
-    required this.invoiceId,
-    required this.description,
-    required this.quantity,
-    required this.rate,
-    required this.amount,
-    required this.createdAt,
-  });
+      if (status == 'sent') {
+        updateData['sent_date'] =
+            DateTime.now().toIso8601String().split('T')[0];
+      } else if (status == 'paid') {
+        updateData['payment_date'] =
+            DateTime.now().toIso8601String().split('T')[0];
+      }
 
-  factory InvoiceServiceModel.fromJson(Map<String, dynamic> json) {
-    return InvoiceServiceModel(
-      id: json['id'] ?? '',
-      invoiceId: json['invoice_id'] ?? '',
-      description: json['description'] ?? '',
-      quantity: (json['quantity'] ?? 0).toDouble(),
-      rate: (json['rate'] ?? 0).toDouble(),
-      amount: (json['amount'] ?? 0).toDouble(),
-      createdAt: DateTime.parse(
-          json['created_at'] ?? DateTime.now().toIso8601String()),
-    );
+      await _supabase.client
+          .from('invoices')
+          .update(updateData)
+          .eq('id', invoiceId);
+    } catch (error) {
+      throw Exception('Failed to update invoice status: $error');
+    }
   }
 
-  Map<String, dynamic> toJson() {
-    return {
-      'id': id,
-      'invoice_id': invoiceId,
-      'description': description,
-      'quantity': quantity,
-      'rate': rate,
-      'amount': amount,
-      'created_at': createdAt.toIso8601String(),
-    };
+  // Generate invoice from inspection
+  Future<Map<String, dynamic>> generateInvoiceFromInspection(
+      String inspectionId) async {
+    try {
+      final inspection = await _supabase.client
+          .from('inspections')
+          .select('*')
+          .eq('id', inspectionId)
+          .single();
+
+      // Create invoice with inspection data
+      final invoice = await createInvoice(
+        clientName: inspection['client_name'] ?? 'Unknown Client',
+        clientEmail: '', // Will need to be filled by user
+        propertyLocation: inspection['property_location'],
+        propertyType: inspection['property_type'],
+        inspectionId: inspectionId,
+        inspectionDate: DateTime.parse(inspection['inspection_date']),
+        services: [
+          {
+            'description':
+                'Property Inspection - ${inspection['property_type']}',
+            'quantity': 1.0,
+            'rate': 58.0, // Default rate in OMR (converted from $150)
+          }
+        ],
+      );
+
+      return invoice;
+    } catch (error) {
+      throw Exception('Failed to generate invoice from inspection: $error');
+    }
+  }
+
+  // Format currency for display
+  String formatCurrency(double amount) {
+    return CurrencyHelper.formatOMRWithSymbol(amount);
+  }
+
+  // Convert USD to OMR
+  double convertToOMR(double usdAmount) {
+    return CurrencyHelper.convertUSDToOMR(usdAmount);
   }
 }

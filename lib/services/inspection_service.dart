@@ -1,215 +1,239 @@
-import 'package:supabase_flutter/supabase_flutter.dart';
-
-import '../models/inspection.dart';
-import '../models/inspection_area.dart';
-import '../models/inspection_item.dart';
-import './auth_service.dart';
+import 'dart:io';
 import './supabase_service.dart';
 
 class InspectionService {
-  static InspectionService? _instance;
-  static InspectionService get instance => _instance ??= InspectionService._();
+  final SupabaseService _supabase = SupabaseService.instance;
 
-  InspectionService._();
-
-  final SupabaseClient _client = SupabaseService.instance.client;
-
-  // Get all inspections for current user
-  Future<List<Inspection>> getInspections() async {
-    final user = AuthService.instance.currentUser;
-    if (user == null) throw Exception('User not authenticated');
-
+  // Get inspections for current user
+  Future<List<Map<String, dynamic>>> getUserInspections({
+    int? limit,
+    String? status,
+  }) async {
     try {
-      final response = await _client
+      var query = _supabase.client
           .from('inspections')
-          .select()
-          .eq('user_id', user.id)
-          .order('created_at', ascending: false);
+          .select('*, inspection_areas!inner(*, inspection_items(*))')
+          .eq('user_id', _supabase.currentUserId!);
 
-      return response.map((json) => Inspection.fromJson(json)).toList();
+      if (status != null) {
+        query = query.eq('status', status);
+      }
+
+      var orderedQuery = query.order('created_at', ascending: false);
+
+      if (limit != null) {
+        return await orderedQuery.limit(limit);
+      }
+
+      return await orderedQuery;
     } catch (error) {
-      throw Exception('Failed to get inspections: $error');
+      throw Exception('Failed to load inspections: $error');
     }
   }
 
-  // Get inspection by ID
-  Future<Inspection> getInspectionById(String id) async {
+  // Get single inspection with full details
+  Future<Map<String, dynamic>> getInspectionDetails(String inspectionId) async {
     try {
-      final response =
-          await _client.from('inspections').select().eq('id', id).single();
+      final response = await _supabase.client.from('inspections').select('''
+            *,
+            inspection_areas!inner(
+              *,
+              inspection_items(*)
+            )
+          ''').eq('id', inspectionId).single();
 
-      return Inspection.fromJson(response);
+      return response;
     } catch (error) {
-      throw Exception('Failed to get inspection: $error');
+      throw Exception('Failed to load inspection details: $error');
     }
   }
 
   // Create new inspection
-  Future<Inspection> createInspection(Map<String, dynamic> data) async {
-    final user = AuthService.instance.currentUser;
-    if (user == null) throw Exception('User not authenticated');
-
-    data['user_id'] = user.id;
-
+  Future<Map<String, dynamic>> createInspection({
+    required String clientName,
+    required String propertyLocation,
+    required String propertyType,
+    required String inspectorName,
+    required DateTime inspectionDate,
+  }) async {
     try {
-      final response =
-          await _client.from('inspections').insert(data).select().single();
+      final inspectionData = {
+        'user_id': _supabase.currentUserId,
+        'client_name': clientName,
+        'property_location': propertyLocation,
+        'property_type': propertyType,
+        'inspector_name': inspectorName,
+        'inspection_date': inspectionDate.toIso8601String().split('T')[0],
+      };
 
-      return Inspection.fromJson(response);
+      final response = await _supabase.client
+          .from('inspections')
+          .insert(inspectionData)
+          .select()
+          .single();
+
+      return response;
     } catch (error) {
       throw Exception('Failed to create inspection: $error');
     }
   }
 
-  // Update inspection
-  Future<Inspection> updateInspection(
-      String id, Map<String, dynamic> data) async {
+  // Update inspection status
+  Future<void> updateInspectionStatus(
+      String inspectionId, String status) async {
     try {
-      final response = await _client
+      await _supabase.client
           .from('inspections')
-          .update(data)
-          .eq('id', id)
-          .select()
-          .single();
-
-      return Inspection.fromJson(response);
+          .update({'status': status}).eq('id', inspectionId);
     } catch (error) {
-      throw Exception('Failed to update inspection: $error');
-    }
-  }
-
-  // Delete inspection
-  Future<void> deleteInspection(String id) async {
-    try {
-      await _client.from('inspections').delete().eq('id', id);
-    } catch (error) {
-      throw Exception('Failed to delete inspection: $error');
-    }
-  }
-
-  // Get inspection areas for an inspection
-  Future<List<InspectionArea>> getInspectionAreas(String inspectionId) async {
-    try {
-      final response = await _client
-          .from('inspection_areas')
-          .select()
-          .eq('inspection_id', inspectionId)
-          .order('created_at', ascending: true);
-
-      return response.map((json) => InspectionArea.fromJson(json)).toList();
-    } catch (error) {
-      throw Exception('Failed to get inspection areas: $error');
+      throw Exception('Failed to update inspection status: $error');
     }
   }
 
   // Create inspection area
-  Future<InspectionArea> createInspectionArea(Map<String, dynamic> data) async {
+  Future<Map<String, dynamic>> createInspectionArea({
+    required String inspectionId,
+    required String name,
+  }) async {
     try {
-      final response =
-          await _client.from('inspection_areas').insert(data).select().single();
+      final areaData = {
+        'inspection_id': inspectionId,
+        'name': name,
+      };
 
-      return InspectionArea.fromJson(response);
+      final response = await _supabase.client
+          .from('inspection_areas')
+          .insert(areaData)
+          .select()
+          .single();
+
+      return response;
     } catch (error) {
       throw Exception('Failed to create inspection area: $error');
     }
   }
 
-  // Get inspection items for an area
-  Future<List<InspectionItem>> getInspectionItems(String areaId) async {
-    try {
-      final response = await _client
-          .from('inspection_items')
-          .select()
-          .eq('area_id', areaId)
-          .order('created_at', ascending: true);
-
-      return response.map((json) => InspectionItem.fromJson(json)).toList();
-    } catch (error) {
-      throw Exception('Failed to get inspection items: $error');
-    }
-  }
-
   // Create inspection item
-  Future<InspectionItem> createInspectionItem(Map<String, dynamic> data) async {
+  Future<Map<String, dynamic>> createInspectionItem({
+    required String areaId,
+    required String point,
+    required String category,
+    String? comments,
+    String? location,
+    String status = 'N/A',
+  }) async {
     try {
-      final response =
-          await _client.from('inspection_items').insert(data).select().single();
+      final itemData = {
+        'area_id': areaId,
+        'point': point,
+        'category': category,
+        'comments': comments,
+        'location': location,
+        'status': status,
+        'photos': <String>[],
+      };
 
-      return InspectionItem.fromJson(response);
+      final response = await _supabase.client
+          .from('inspection_items')
+          .insert(itemData)
+          .select()
+          .single();
+
+      return response;
     } catch (error) {
       throw Exception('Failed to create inspection item: $error');
     }
   }
 
   // Update inspection item
-  Future<InspectionItem> updateInspectionItem(
-      String id, Map<String, dynamic> data) async {
+  Future<void> updateInspectionItem(
+    String itemId, {
+    String? status,
+    String? comments,
+    List<String>? photos,
+  }) async {
     try {
-      final response = await _client
-          .from('inspection_items')
-          .update(data)
-          .eq('id', id)
-          .select()
-          .single();
+      final updateData = <String, dynamic>{};
 
-      return InspectionItem.fromJson(response);
+      if (status != null) updateData['status'] = status;
+      if (comments != null) updateData['comments'] = comments;
+      if (photos != null) updateData['photos'] = photos;
+
+      await _supabase.client
+          .from('inspection_items')
+          .update(updateData)
+          .eq('id', itemId);
     } catch (error) {
       throw Exception('Failed to update inspection item: $error');
     }
   }
 
-  // Get inspection progress
-  Future<Map<String, dynamic>> getInspectionProgress(
-      String inspectionId) async {
+  // Upload photo to storage and add to item
+  Future<String> uploadInspectionPhoto(String filePath, String itemId) async {
     try {
-      // Get all items for this inspection
-      final areas = await getInspectionAreas(inspectionId);
-      int totalItems = 0;
-      int completedItems = 0;
-      int failedItems = 0;
-      int passedItems = 0;
+      final fileName =
+          'inspection_${itemId}_${DateTime.now().millisecondsSinceEpoch}.jpg';
 
-      for (final area in areas) {
-        final items = await getInspectionItems(area.id);
-        totalItems += items.length;
+      await _supabase.client.storage
+          .from('inspection-photos')
+          .upload(fileName, File(filePath));
 
-        for (final item in items) {
-          if (item.status != null && item.status != 'N/A') {
-            completedItems++;
-            if (item.isFailing) failedItems++;
-            if (item.isPassing) passedItems++;
-          }
-        }
-      }
+      final publicUrl = _supabase.client.storage
+          .from('inspection-photos')
+          .getPublicUrl(fileName);
 
-      return {
-        'totalItems': totalItems,
-        'completedItems': completedItems,
-        'passedItems': passedItems,
-        'failedItems': failedItems,
-        'progress': totalItems > 0 ? (completedItems / totalItems) : 0.0,
-      };
+      return publicUrl;
     } catch (error) {
-      throw Exception('Failed to get inspection progress: $error');
+      throw Exception('Failed to upload photo: $error');
     }
   }
 
-  // Get recent inspections for dashboard
-  Future<List<Inspection>> getRecentInspections({int limit = 5}) async {
-    final user = AuthService.instance.currentUser;
-    if (user == null) throw Exception('User not authenticated');
-
+  // Get dashboard statistics
+  Future<Map<String, dynamic>> getDashboardStats() async {
     try {
-      final response = await _client
-          .from('inspections')
-          .select()
-          .eq('user_id', user.id)
-          .order('created_at', ascending: false)
-          .limit(limit);
+      final userId = _supabase.currentUserId!;
 
-      return response.map((json) => Inspection.fromJson(json)).toList();
+      // Get today's inspections count
+      final todayStart = DateTime.now().toIso8601String().split('T')[0];
+
+      final todayInspections = await _supabase.client
+          .from('inspections')
+          .select('id')
+          .eq('user_id', userId)
+          .eq('inspection_date', todayStart)
+          .count();
+
+      // Get this week's completed inspections
+      final weekStart = DateTime.now()
+          .subtract(Duration(days: 7))
+          .toIso8601String()
+          .split('T')[0];
+
+      final weeklyInspections = await _supabase.client
+          .from('inspections')
+          .select('id')
+          .eq('user_id', userId)
+          .gte('inspection_date', weekStart)
+          .count();
+
+      // Get pending invoices count
+      final pendingInvoices = await _supabase.client
+          .from('invoices')
+          .select('total_amount')
+          .eq('user_id', userId)
+          .eq('status', 'draft');
+
+      final pendingTotal = pendingInvoices.fold<double>(0.0,
+          (sum, invoice) => sum + (invoice['total_amount'] as num).toDouble());
+
+      return {
+        'todayInspections': todayInspections.count ?? 0,
+        'weeklyCompleted': weeklyInspections.count ?? 0,
+        'pendingInvoicesCount': pendingInvoices.length,
+        'pendingInvoicesAmount': pendingTotal,
+      };
     } catch (error) {
-      throw Exception('Failed to get recent inspections: $error');
+      throw Exception('Failed to load dashboard stats: $error');
     }
   }
 }
