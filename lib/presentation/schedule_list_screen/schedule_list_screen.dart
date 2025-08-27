@@ -3,6 +3,8 @@ import 'package:flutter/services.dart';
 import 'package:sizer/sizer.dart';
 
 import '../../core/app_export.dart';
+import '../../core/layout_constants.dart';
+import '../../utils/responsive_helper.dart';
 import '../../widgets/custom_app_bar.dart';
 import '../../widgets/custom_bottom_bar.dart';
 import '../../widgets/custom_tab_bar.dart';
@@ -295,18 +297,25 @@ class _ScheduleListScreenState extends State<ScheduleListScreen>
       color: theme.colorScheme.primary,
       child: ListView.builder(
         controller: _scrollController,
-        padding: EdgeInsets.only(bottom: 10.h),
+        padding: EdgeInsets.only(
+          left: LayoutConstants.paddingMd,
+          right: LayoutConstants.paddingMd,
+          bottom: LayoutConstants.spacingXxl * 2,
+        ),
         itemCount: _filteredSchedules.length,
         itemBuilder: (context, index) {
           final schedule = _filteredSchedules[index];
-          return ScheduleCardWidget(
-            schedule: schedule,
-            onTap: () => _navigateToInspectionDetail(schedule),
-            onCallClient: () => _callClient(schedule),
-            onGetDirections: () => _getDirections(schedule),
-            onReschedule: () => _rescheduleInspection(schedule),
-            onMarkComplete: () => _markComplete(schedule),
-            onCancel: () => _cancelInspection(schedule),
+          return Padding(
+            padding: EdgeInsets.only(bottom: LayoutConstants.spacingMd),
+            child: ScheduleCardWidget(
+              schedule: schedule,
+              onTap: () => _navigateToInspectionDetail(schedule),
+              onCallClient: () => _callClient(schedule),
+              onGetDirections: () => _getDirections(schedule),
+              onReschedule: () => _rescheduleInspection(schedule),
+              onMarkComplete: () => _markComplete(schedule),
+              onCancel: () => _cancelInspection(schedule),
+            ),
           );
         },
       ),
@@ -328,18 +337,28 @@ class _ScheduleListScreenState extends State<ScheduleListScreen>
   Widget _buildEmptyState(ThemeData theme) {
     return Center(
       child: Padding(
-        padding: EdgeInsets.all(8.w),
+        padding: context.responsivePadding,
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             CustomImageWidget(
               imageUrl:
                   "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?fm=jpg&q=60&w=3000&ixlib=rb-4.0.3",
-              width: 60.w,
-              height: 30.h,
+              width: ResponsiveHelper.getResponsiveValue(
+                context,
+                small: 200,
+                medium: 240,
+                large: 280,
+              ),
+              height: ResponsiveHelper.getResponsiveValue(
+                context,
+                small: 160,
+                medium: 180,
+                large: 200,
+              ),
               fit: BoxFit.contain,
             ),
-            SizedBox(height: 4.h),
+            SizedBox(height: LayoutConstants.spacingXl),
             Text(
               'No inspections scheduled',
               style: theme.textTheme.headlineSmall?.copyWith(
@@ -347,7 +366,7 @@ class _ScheduleListScreenState extends State<ScheduleListScreen>
                 color: theme.colorScheme.onSurface.withValues(alpha: 0.8),
               ),
             ),
-            SizedBox(height: 2.h),
+            SizedBox(height: LayoutConstants.spacingLg),
             Text(
               _searchQuery.isNotEmpty || _activeFilters.isNotEmpty
                   ? 'Try adjusting your search or filters'
@@ -357,19 +376,21 @@ class _ScheduleListScreenState extends State<ScheduleListScreen>
               ),
               textAlign: TextAlign.center,
             ),
-            SizedBox(height: 4.h),
+            SizedBox(height: LayoutConstants.spacingXl),
             if (_searchQuery.isEmpty && _activeFilters.isEmpty)
               ElevatedButton.icon(
                 onPressed: _addNewInspection,
                 icon: CustomIconWidget(
                   iconName: 'add',
                   color: Colors.white,
-                  size: 20,
+                  size: LayoutConstants.iconMd,
                 ),
                 label: Text('Schedule Inspection'),
                 style: ElevatedButton.styleFrom(
-                  padding:
-                      EdgeInsets.symmetric(horizontal: 6.w, vertical: 1.5.h),
+                  padding: EdgeInsets.symmetric(
+                    horizontal: LayoutConstants.paddingXl,
+                    vertical: LayoutConstants.paddingMd,
+                  ),
                 ),
               )
             else

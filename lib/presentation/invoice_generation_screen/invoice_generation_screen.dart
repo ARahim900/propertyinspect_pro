@@ -466,107 +466,141 @@ class _InvoiceGenerationScreenState extends State<InvoiceGenerationScreen> {
         children: [
           Expanded(
             child: SingleChildScrollView(
-              padding: EdgeInsets.all(4.w),
+              padding: EdgeInsets.symmetric(horizontal: 16, vertical: 16),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  // Invoice header with improved spacing
                   InvoiceHeaderWidget(
                     clientData: _clientData,
                     propertyData: _propertyData,
                     inspectionDate: _inspectionDate,
                   ),
-                  SizedBox(height: 3.h),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          'Services',
-                          style: theme.textTheme.titleLarge?.copyWith(
-                            fontWeight: FontWeight.w600,
+                  SizedBox(height: 32),
+                  
+                  // Services section with better layout
+                  Container(
+                    padding: EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      color: theme.colorScheme.surface,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(
+                        color: theme.colorScheme.outline.withValues(alpha: 0.1),
+                      ),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                'Services',
+                                style: theme.textTheme.titleLarge?.copyWith(
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                            TextButton.icon(
+                              onPressed: _showAddServiceBottomSheet,
+                              icon: CustomIconWidget(
+                                iconName: 'add',
+                                color: theme.colorScheme.primary,
+                                size: 16,
+                              ),
+                              label: Text('Add Service'),
+                              style: TextButton.styleFrom(
+                                padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                              ),
+                            ),
+                          ],
+                        ),
+                        SizedBox(height: 16),
+                        if (_services.isEmpty)
+                          Container(
+                            width: double.infinity,
+                            padding: EdgeInsets.all(32),
+                            decoration: BoxDecoration(
+                              color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                color: theme.colorScheme.outline.withValues(alpha: 0.1),
+                                style: BorderStyle.solid,
+                              ),
+                            ),
+                            child: Column(
+                              children: [
+                                CustomIconWidget(
+                                  iconName: 'receipt_long',
+                                  color: theme.colorScheme.onSurface
+                                      .withValues(alpha: 0.4),
+                                  size: 48,
+                                ),
+                                SizedBox(height: 16),
+                                Text(
+                                  'No services added yet',
+                                  style: theme.textTheme.titleMedium?.copyWith(
+                                    color: theme.colorScheme.onSurface
+                                        .withValues(alpha: 0.6),
+                                  ),
+                                ),
+                                SizedBox(height: 8),
+                                Text(
+                                  'Tap "Add Service" to get started',
+                                  style: theme.textTheme.bodySmall?.copyWith(
+                                    color: theme.colorScheme.onSurface
+                                        .withValues(alpha: 0.5),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          )
+                        else
+                          Column(
+                            children: List.generate(_services.length, (index) {
+                              return Padding(
+                                padding: EdgeInsets.only(bottom: index < _services.length - 1 ? 12 : 0),
+                                child: ServiceLineItemWidget(
+                                  serviceData: _services[index],
+                                  onServiceUpdated: (updatedService) =>
+                                      _updateService(index, updatedService),
+                                  onRemove: () => _removeService(index),
+                                ),
+                              );
+                            }),
                           ),
-                        ),
-                      ),
-                      TextButton.icon(
-                        onPressed: _showAddServiceBottomSheet,
-                        icon: CustomIconWidget(
-                          iconName: 'add',
-                          color: theme.colorScheme.primary,
-                          size: 4.w,
-                        ),
-                        label: Text('Add Service'),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
-                  SizedBox(height: 1.h),
-                  if (_services.isEmpty)
-                    Container(
-                      width: double.infinity,
-                      padding: EdgeInsets.all(8.w),
-                      decoration: BoxDecoration(
-                        color: theme.colorScheme.surface,
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(
-                          color:
-                              theme.colorScheme.outline.withValues(alpha: 0.2),
-                        ),
-                      ),
-                      child: Column(
-                        children: [
-                          CustomIconWidget(
-                            iconName: 'receipt_long',
-                            color: theme.colorScheme.onSurface
-                                .withValues(alpha: 0.4),
-                            size: 12.w,
-                          ),
-                          SizedBox(height: 2.h),
-                          Text(
-                            'No services added yet',
-                            style: theme.textTheme.titleMedium?.copyWith(
-                              color: theme.colorScheme.onSurface
-                                  .withValues(alpha: 0.6),
-                            ),
-                          ),
-                          SizedBox(height: 1.h),
-                          Text(
-                            'Tap "Add Service" to get started',
-                            style: theme.textTheme.bodySmall?.copyWith(
-                              color: theme.colorScheme.onSurface
-                                  .withValues(alpha: 0.5),
-                            ),
-                          ),
-                        ],
-                      ),
-                    )
-                  else
-                    ...List.generate(_services.length, (index) {
-                      return ServiceLineItemWidget(
-                        serviceData: _services[index],
-                        onServiceUpdated: (updatedService) =>
-                            _updateService(index, updatedService),
-                        onRemove: () => _removeService(index),
-                      );
-                    }),
-                  SizedBox(height: 3.h),
+                  SizedBox(height: 24),
+                  
+                  // Tax calculation with improved layout
                   TaxCalculationWidget(
                     subtotal: _subtotal,
                     taxPercentage: _taxPercentage,
                     onTaxPercentageChanged: _updateTaxPercentage,
                   ),
-                  SizedBox(height: 3.h),
+                  SizedBox(height: 24),
+                  
+                  // Invoice status section
                   InvoiceStatusWidget(
                     currentStatus: _invoiceStatus,
                     onStatusChanged: _updateInvoiceStatus,
                     sentDate: _sentDate,
                     paidDate: _paidDate,
                   ),
-                  SizedBox(height: 3.h),
+                  SizedBox(height: 24),
+                  
+                  // Client contact section
                   ClientContactWidget(
                     clientEmail: _clientEmail,
                     paymentTerms: _paymentTerms,
                     onEmailChanged: _updateClientEmail,
                     onPaymentTermsChanged: _updatePaymentTerms,
                   ),
-                  SizedBox(height: 3.h),
+                  SizedBox(height: 32),
+                  
+                  // Action buttons with improved spacing
                   Row(
                     children: [
                       Expanded(
@@ -574,23 +608,23 @@ class _InvoiceGenerationScreenState extends State<InvoiceGenerationScreen> {
                           onPressed: _createAnotherInvoice,
                           child: Text('New Invoice'),
                           style: OutlinedButton.styleFrom(
-                            padding: EdgeInsets.symmetric(vertical: 2.h),
+                            padding: EdgeInsets.symmetric(vertical: 16),
                           ),
                         ),
                       ),
-                      SizedBox(width: 3.w),
+                      SizedBox(width: 16),
                       Expanded(
                         child: ElevatedButton(
                           onPressed: _previewInvoice,
                           child: Text('Preview'),
                           style: ElevatedButton.styleFrom(
-                            padding: EdgeInsets.symmetric(vertical: 2.h),
+                            padding: EdgeInsets.symmetric(vertical: 16),
                           ),
                         ),
                       ),
                     ],
                   ),
-                  SizedBox(height: 10.h),
+                  SizedBox(height: 120), // Space for FAB
                 ],
               ),
             ),

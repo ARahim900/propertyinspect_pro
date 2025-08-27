@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:sizer/sizer.dart';
 
 import '../../../core/app_export.dart';
+import '../../../core/layout_constants.dart';
 
 class ScheduleCardWidget extends StatelessWidget {
   final Map<String, dynamic> schedule;
@@ -44,27 +45,29 @@ class ScheduleCardWidget extends StatelessWidget {
         }
       },
       child: Card(
-        margin: EdgeInsets.symmetric(horizontal: 4.w, vertical: 1.h),
+        margin: EdgeInsets.zero,
         elevation: 2,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(LayoutConstants.radiusLg),
         ),
         child: InkWell(
           onTap: onTap,
           onLongPress: () => _showContextMenu(context),
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(LayoutConstants.radiusLg),
           child: Padding(
-            padding: EdgeInsets.all(4.w),
+            padding: EdgeInsets.all(LayoutConstants.paddingLg),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                // Header row with icon, client info, and status
                 Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Container(
-                      padding: EdgeInsets.all(2.w),
+                      padding: EdgeInsets.all(12),
                       decoration: BoxDecoration(
                         color: theme.colorScheme.primary.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(8),
+                        borderRadius: BorderRadius.circular(12),
                       ),
                       child: CustomIconWidget(
                         iconName: _getPropertyTypeIcon(
@@ -74,7 +77,7 @@ class ScheduleCardWidget extends StatelessWidget {
                         size: 20,
                       ),
                     ),
-                    SizedBox(width: 3.w),
+                    SizedBox(width: 16),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -84,17 +87,20 @@ class ScheduleCardWidget extends StatelessWidget {
                                 'Unknown Client',
                             style: theme.textTheme.titleMedium?.copyWith(
                               fontWeight: FontWeight.w600,
+                              fontSize: 16,
                             ),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           ),
-                          SizedBox(height: 0.5.h),
+                          SizedBox(height: 4),
                           Text(
                             schedule['propertyAddress'] as String? ??
                                 'No address provided',
-                            style: theme.textTheme.bodySmall?.copyWith(
+                            style: theme.textTheme.bodyMedium?.copyWith(
                               color: theme.colorScheme.onSurface
                                   .withValues(alpha: 0.7),
+                              fontSize: 14,
+                              height: 1.3,
                             ),
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis,
@@ -102,84 +108,101 @@ class ScheduleCardWidget extends StatelessWidget {
                         ],
                       ),
                     ),
+                    SizedBox(width: 12),
                     Container(
-                      padding:
-                          EdgeInsets.symmetric(horizontal: 2.w, vertical: 1.h),
+                      padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                       decoration: BoxDecoration(
                         color: statusColor.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(16),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(
+                          color: statusColor.withValues(alpha: 0.2),
+                          width: 1,
+                        ),
                       ),
                       child: Text(
                         status.toUpperCase(),
                         style: theme.textTheme.labelSmall?.copyWith(
                           color: statusColor,
                           fontWeight: FontWeight.w600,
+                          fontSize: 10,
+                          letterSpacing: 0.5,
                         ),
                       ),
                     ),
                   ],
                 ),
-                SizedBox(height: 3.h),
-                Row(
-                  children: [
-                    CustomIconWidget(
-                      iconName: 'access_time',
-                      color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
-                      size: 16,
-                    ),
-                    SizedBox(width: 2.w),
-                    Text(
-                      schedule['scheduledTime'] as String? ?? 'Time not set',
-                      style: theme.textTheme.bodyMedium?.copyWith(
-                        color:
-                            theme.colorScheme.onSurface.withValues(alpha: 0.8),
+                SizedBox(height: 20),
+                // Time and duration info
+                Container(
+                  padding: EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Row(
+                    children: [
+                      CustomIconWidget(
+                        iconName: 'access_time',
+                        color: theme.colorScheme.primary,
+                        size: 16,
                       ),
-                    ),
-                    Spacer(),
-                    CustomIconWidget(
-                      iconName: 'timer',
-                      color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
-                      size: 16,
-                    ),
-                    SizedBox(width: 1.w),
-                    Text(
-                      '${schedule['estimatedDuration'] ?? 60} min',
-                      style: theme.textTheme.bodyMedium?.copyWith(
-                        color:
-                            theme.colorScheme.onSurface.withValues(alpha: 0.8),
+                      SizedBox(width: 8),
+                      Text(
+                        schedule['scheduledTime'] as String? ?? 'Time not set',
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          color: theme.colorScheme.onSurface,
+                          fontWeight: FontWeight.w500,
+                        ),
                       ),
-                    ),
-                  ],
+                      Spacer(),
+                      CustomIconWidget(
+                        iconName: 'timer',
+                        color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+                        size: 16,
+                      ),
+                      SizedBox(width: 6),
+                      Text(
+                        '${schedule['estimatedDuration'] ?? 60} min',
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          color: theme.colorScheme.onSurface.withValues(alpha: 0.8),
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
+                // Notes section (if present)
                 if (schedule['notes'] != null &&
                     (schedule['notes'] as String).isNotEmpty) ...[
-                  SizedBox(height: 2.h),
+                  SizedBox(height: 16),
                   Container(
-                    padding: EdgeInsets.all(2.w),
+                    padding: EdgeInsets.all(12),
                     decoration: BoxDecoration(
                       color: theme.colorScheme.surface,
                       borderRadius: BorderRadius.circular(8),
                       border: Border.all(
-                        color: theme.colorScheme.outline.withValues(alpha: 0.2),
+                        color: theme.colorScheme.outline.withValues(alpha: 0.15),
                       ),
                     ),
                     child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         CustomIconWidget(
                           iconName: 'note',
                           color: theme.colorScheme.onSurface
                               .withValues(alpha: 0.6),
-                          size: 14,
+                          size: 16,
                         ),
-                        SizedBox(width: 2.w),
+                        SizedBox(width: 8),
                         Expanded(
                           child: Text(
                             schedule['notes'] as String,
                             style: theme.textTheme.bodySmall?.copyWith(
                               color: theme.colorScheme.onSurface
                                   .withValues(alpha: 0.7),
+                              height: 1.4,
                             ),
-                            maxLines: 2,
+                            maxLines: 3,
                             overflow: TextOverflow.ellipsis,
                           ),
                         ),

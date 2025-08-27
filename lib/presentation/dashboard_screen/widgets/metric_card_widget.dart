@@ -42,42 +42,51 @@ class MetricCardWidget extends StatelessWidget {
         }
       },
       child: Container(
-        width: 42.w,
-        padding: EdgeInsets.all(4.w),
+        padding: EdgeInsets.all(16),
         decoration: BoxDecoration(
           color: backgroundColor ?? theme.colorScheme.surface,
-          borderRadius: BorderRadius.circular(3.w),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: theme.colorScheme.outline.withValues(alpha: 0.1),
+            width: 1,
+          ),
           boxShadow: [
             BoxShadow(
-              color: theme.colorScheme.shadow.withValues(alpha: 0.1),
-              blurRadius: 8,
-              offset: const Offset(0, 2),
+              color: theme.colorScheme.shadow.withValues(alpha: 0.08),
+              blurRadius: 12,
+              offset: const Offset(0, 4),
+              spreadRadius: 0,
             ),
           ],
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                CustomIconWidget(
-                  iconName: _getIconName(icon),
-                  color: iconColor ?? theme.colorScheme.primary,
-                  size: 6.w,
+                Container(
+                  padding: EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: (iconColor ?? theme.colorScheme.primary).withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: CustomIconWidget(
+                    iconName: _getIconName(icon),
+                    color: iconColor ?? theme.colorScheme.primary,
+                    size: 20,
+                  ),
                 ),
                 if (showTrend && trendValue != null)
                   Container(
-                    padding:
-                        EdgeInsets.symmetric(horizontal: 2.w, vertical: 0.5.h),
+                    padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(
                       color: isPositiveTrend
-                          ? AppTheme.lightTheme.colorScheme.tertiary
-                              .withValues(alpha: 0.1)
-                          : AppTheme.lightTheme.colorScheme.error
-                              .withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(2.w),
+                          ? AppTheme.successLight.withValues(alpha: 0.1)
+                          : AppTheme.errorLight.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(12),
                     ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
@@ -86,18 +95,19 @@ class MetricCardWidget extends StatelessWidget {
                           iconName:
                               isPositiveTrend ? 'trending_up' : 'trending_down',
                           color: isPositiveTrend
-                              ? AppTheme.lightTheme.colorScheme.tertiary
-                              : AppTheme.lightTheme.colorScheme.error,
-                          size: 3.w,
+                              ? AppTheme.successLight
+                              : AppTheme.errorLight,
+                          size: 12,
                         ),
-                        SizedBox(width: 1.w),
+                        SizedBox(width: 4),
                         Text(
                           trendValue!,
                           style: theme.textTheme.labelSmall?.copyWith(
                             color: isPositiveTrend
-                                ? AppTheme.lightTheme.colorScheme.tertiary
-                                : AppTheme.lightTheme.colorScheme.error,
+                                ? AppTheme.successLight
+                                : AppTheme.errorLight,
                             fontWeight: FontWeight.w600,
+                            fontSize: 10,
                           ),
                         ),
                       ],
@@ -105,30 +115,45 @@ class MetricCardWidget extends StatelessWidget {
                   ),
               ],
             ),
-            SizedBox(height: 2.h),
-            Text(
-              value,
-              style: theme.textTheme.headlineMedium?.copyWith(
-                fontWeight: FontWeight.w700,
-                color: theme.colorScheme.onSurface,
+            SizedBox(height: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  Text(
+                    value,
+                    style: theme.textTheme.headlineLarge?.copyWith(
+                      fontWeight: FontWeight.w700,
+                      color: theme.colorScheme.onSurface,
+                      fontSize: 28,
+                      height: 1.1,
+                    ),
+                  ),
+                  SizedBox(height: 4),
+                  Text(
+                    title,
+                    style: theme.textTheme.titleSmall?.copyWith(
+                      color: theme.colorScheme.onSurface.withValues(alpha: 0.8),
+                      fontWeight: FontWeight.w600,
+                      fontSize: 13,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  SizedBox(height: 2),
+                  Text(
+                    subtitle,
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+                      fontSize: 11,
+                      height: 1.3,
+                    ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
               ),
-            ),
-            SizedBox(height: 0.5.h),
-            Text(
-              title,
-              style: theme.textTheme.bodyMedium?.copyWith(
-                color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-            SizedBox(height: 0.5.h),
-            Text(
-              subtitle,
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
-              ),
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
             ),
           ],
         ),

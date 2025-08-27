@@ -23,6 +23,7 @@ class _LoginScreenState extends State<LoginScreen> with ValidationMixin {
 
   bool _isPasswordVisible = false;
   bool _isLoading = false;
+  bool _showDemoCredentials = false;
   String? _emailError;
   String? _passwordError;
 
@@ -163,7 +164,7 @@ class _LoginScreenState extends State<LoginScreen> with ValidationMixin {
           SizedBox(height: 2.h),
           _buildForgotPasswordLink(),
           SizedBox(height: 4.h),
-          _buildSignInButton(),
+          _buildAuthButtons(),
           SizedBox(height: 3.h),
           _buildDemoCredentials(),
         ],
@@ -274,46 +275,120 @@ class _LoginScreenState extends State<LoginScreen> with ValidationMixin {
     );
   }
 
-  Widget _buildSignInButton() {
-    return SizedBox(
-      width: double.infinity,
-      height: 6.h,
-      child: ElevatedButton(
-        onPressed: _isLoading ? null : _handleSignIn,
-        style: ElevatedButton.styleFrom(
-          backgroundColor: AppTheme.lightTheme.colorScheme.primary,
-          foregroundColor: Colors.white,
-          elevation: 2,
-          shadowColor:
-              AppTheme.lightTheme.colorScheme.primary.withValues(alpha: 0.3),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(2.w),
+  Widget _buildAuthButtons() {
+    return Column(
+      children: [
+        // Sign In Button
+        SizedBox(
+          width: double.infinity,
+          height: 6.h,
+          child: ElevatedButton(
+            onPressed: _isLoading ? null : _handleSignIn,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppTheme.lightTheme.colorScheme.primary,
+              foregroundColor: Colors.white,
+              elevation: 2,
+              shadowColor:
+                  AppTheme.lightTheme.colorScheme.primary.withValues(alpha: 0.3),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(2.w),
+              ),
+            ),
+            child: _isLoading
+                ? SizedBox(
+                    width: 5.w,
+                    height: 5.w,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                    ),
+                  )
+                : Text(
+                    'Sign In',
+                    style: AppTheme.lightTheme.textTheme.labelLarge?.copyWith(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
           ),
         ),
-        child: _isLoading
-            ? SizedBox(
-                width: 5.w,
-                height: 5.w,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                ),
-              )
-            : Text(
-                'Sign In',
-                style: AppTheme.lightTheme.textTheme.labelLarge?.copyWith(
-                  color: Colors.white,
-                  fontWeight: FontWeight.w600,
+        
+        SizedBox(height: 2.h),
+        
+        // Divider with "OR"
+        Row(
+          children: [
+            Expanded(
+              child: Divider(
+                color: AppTheme.lightTheme.colorScheme.outline.withValues(alpha: 0.3),
+                thickness: 1,
+              ),
+            ),
+            Padding(
+              padding: EdgeInsets.symmetric(horizontal: 4.w),
+              child: Text(
+                'OR',
+                style: AppTheme.lightTheme.textTheme.bodySmall?.copyWith(
+                  color: AppTheme.lightTheme.colorScheme.onSurface
+                      .withValues(alpha: 0.6),
+                  fontWeight: FontWeight.w500,
                 ),
               ),
-      ),
+            ),
+            Expanded(
+              child: Divider(
+                color: AppTheme.lightTheme.colorScheme.outline.withValues(alpha: 0.3),
+                thickness: 1,
+              ),
+            ),
+          ],
+        ),
+        
+        SizedBox(height: 2.h),
+        
+        // Sign Up Button
+        SizedBox(
+          width: double.infinity,
+          height: 6.h,
+          child: OutlinedButton(
+            onPressed: _isLoading ? null : _navigateToSignUp,
+            style: OutlinedButton.styleFrom(
+              foregroundColor: AppTheme.lightTheme.colorScheme.primary,
+              side: BorderSide(
+                color: AppTheme.lightTheme.colorScheme.primary,
+                width: 2,
+              ),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(2.w),
+              ),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                CustomIconWidget(
+                  iconName: 'person_add',
+                  color: AppTheme.lightTheme.colorScheme.primary,
+                  size: 5.w,
+                ),
+                SizedBox(width: 2.w),
+                Text(
+                  'Create New Account',
+                  style: AppTheme.lightTheme.textTheme.labelLarge?.copyWith(
+                    color: AppTheme.lightTheme.colorScheme.primary,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
     );
   }
 
   Widget _buildDemoCredentials() {
     return Container(
       width: double.infinity,
-      padding: EdgeInsets.all(4.w),
       decoration: BoxDecoration(
         color: AppTheme.lightTheme.colorScheme.surface,
         borderRadius: BorderRadius.circular(2.w),
@@ -324,97 +399,286 @@ class _LoginScreenState extends State<LoginScreen> with ValidationMixin {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              CustomIconWidget(
-                iconName: 'info',
-                color: AppTheme.lightTheme.colorScheme.primary,
-                size: 4.w,
+          // Header with toggle button
+          InkWell(
+            onTap: () {
+              setState(() {
+                _showDemoCredentials = !_showDemoCredentials;
+              });
+              HapticFeedback.lightImpact();
+            },
+            borderRadius: BorderRadius.vertical(
+              top: Radius.circular(2.w),
+              bottom: _showDemoCredentials ? Radius.zero : Radius.circular(2.w),
+            ),
+            child: Container(
+              width: double.infinity,
+              padding: EdgeInsets.all(4.w),
+              child: Row(
+                children: [
+                  Container(
+                    padding: EdgeInsets.all(2.w),
+                    decoration: BoxDecoration(
+                      color: AppTheme.lightTheme.colorScheme.primary.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(1.w),
+                    ),
+                    child: CustomIconWidget(
+                      iconName: 'info',
+                      color: AppTheme.lightTheme.colorScheme.primary,
+                      size: 4.w,
+                    ),
+                  ),
+                  SizedBox(width: 3.w),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Demo Credentials',
+                          style: AppTheme.lightTheme.textTheme.labelLarge?.copyWith(
+                            fontWeight: FontWeight.w600,
+                            color: AppTheme.lightTheme.colorScheme.primary,
+                          ),
+                        ),
+                        SizedBox(height: 0.5.h),
+                        Text(
+                          'Tap to ${_showDemoCredentials ? 'hide' : 'view'} test accounts',
+                          style: AppTheme.lightTheme.textTheme.bodySmall?.copyWith(
+                            color: AppTheme.lightTheme.colorScheme.onSurface
+                                .withValues(alpha: 0.6),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  AnimatedRotation(
+                    turns: _showDemoCredentials ? 0.5 : 0,
+                    duration: const Duration(milliseconds: 200),
+                    child: CustomIconWidget(
+                      iconName: 'keyboard_arrow_down',
+                      color: AppTheme.lightTheme.colorScheme.primary,
+                      size: 6.w,
+                    ),
+                  ),
+                ],
               ),
-              SizedBox(width: 2.w),
-              Text(
-                'Demo Credentials',
-                style: AppTheme.lightTheme.textTheme.labelLarge?.copyWith(
-                  fontWeight: FontWeight.w600,
-                  color: AppTheme.lightTheme.colorScheme.primary,
-                ),
-              ),
-            ],
+            ),
           ),
-          SizedBox(height: 2.h),
-          _buildCredentialRow(
-              'Inspector', 'inspector@propertyinspect.com', 'inspector123'),
-          SizedBox(height: 1.h),
-          _buildCredentialRow('Admin', 'admin@propertyinspect.com', 'admin123'),
-          SizedBox(height: 1.h),
-          _buildCredentialRow(
-              'Manager', 'manager@propertyinspect.com', 'manager123'),
+          
+          // Expandable content
+          AnimatedContainer(
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.easeInOut,
+            height: _showDemoCredentials ? null : 0,
+            child: AnimatedOpacity(
+              duration: const Duration(milliseconds: 200),
+              opacity: _showDemoCredentials ? 1.0 : 0.0,
+              child: _showDemoCredentials ? Container(
+                width: double.infinity,
+                padding: EdgeInsets.fromLTRB(4.w, 0, 4.w, 4.w),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Divider(
+                      color: AppTheme.lightTheme.colorScheme.outline.withValues(alpha: 0.2),
+                      height: 1,
+                    ),
+                    SizedBox(height: 2.h),
+                    
+                    // Instructions
+                    Container(
+                      width: double.infinity,
+                      padding: EdgeInsets.all(3.w),
+                      decoration: BoxDecoration(
+                        color: AppTheme.lightTheme.colorScheme.primary.withValues(alpha: 0.05),
+                        borderRadius: BorderRadius.circular(1.5.w),
+                        border: Border.all(
+                          color: AppTheme.lightTheme.colorScheme.primary.withValues(alpha: 0.1),
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          CustomIconWidget(
+                            iconName: 'touch_app',
+                            color: AppTheme.lightTheme.colorScheme.primary,
+                            size: 4.w,
+                          ),
+                          SizedBox(width: 2.w),
+                          Expanded(
+                            child: Text(
+                              'Tap any credential below to auto-fill the login form',
+                              style: AppTheme.lightTheme.textTheme.bodySmall?.copyWith(
+                                color: AppTheme.lightTheme.colorScheme.primary,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    
+                    SizedBox(height: 2.h),
+                    
+                    // Credentials list
+                    _buildCredentialRow('Inspector', 'inspector@propertyinspect.com', 'inspector123', 'Conduct property inspections'),
+                    SizedBox(height: 1.h),
+                    _buildCredentialRow('Admin', 'admin@propertyinspect.com', 'admin123', 'Full system access'),
+                    SizedBox(height: 1.h),
+                    _buildCredentialRow('Manager', 'manager@propertyinspect.com', 'manager123', 'Team management'),
+                  ],
+                ),
+              ) : const SizedBox.shrink(),
+            ),
+          ),
         ],
       ),
     );
   }
 
-  Widget _buildCredentialRow(String role, String email, String password) {
-    return GestureDetector(
-      onTap: () {
-        _emailController.text = email;
-        _passwordController.text = password;
-        setState(() {
-          _emailError = null;
-          _passwordError = null;
-        });
-      },
-      child: Container(
-        padding: EdgeInsets.symmetric(vertical: 1.h, horizontal: 2.w),
-        decoration: BoxDecoration(
-          color: AppTheme.lightTheme.colorScheme.surface,
-          borderRadius: BorderRadius.circular(1.w),
-          border: Border.all(
-            color:
-                AppTheme.lightTheme.colorScheme.outline.withValues(alpha: 0.2),
+  Widget _buildCredentialRow(String role, String email, String password, String description) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: () {
+          _emailController.text = email;
+          _passwordController.text = password;
+          clearValidationErrors();
+          HapticFeedback.lightImpact();
+          
+          // Show feedback
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('$role credentials loaded'),
+              duration: const Duration(seconds: 1),
+              behavior: SnackBarBehavior.floating,
+              margin: EdgeInsets.all(4.w),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(2.w),
+              ),
+            ),
+          );
+        },
+        borderRadius: BorderRadius.circular(2.w),
+        child: Container(
+          padding: EdgeInsets.all(3.w),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(2.w),
+            border: Border.all(
+              color: AppTheme.lightTheme.colorScheme.outline.withValues(alpha: 0.2),
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: AppTheme.lightTheme.colorScheme.shadow.withValues(alpha: 0.05),
+                blurRadius: 4,
+                offset: const Offset(0, 2),
+              ),
+            ],
           ),
-        ),
-        child: Row(
-          children: [
-            Expanded(
-              flex: 2,
-              child: Text(
-                role,
-                style: AppTheme.lightTheme.textTheme.bodySmall?.copyWith(
-                  fontWeight: FontWeight.w500,
-                  color: AppTheme.lightTheme.colorScheme.onSurface,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    padding: EdgeInsets.all(1.5.w),
+                    decoration: BoxDecoration(
+                      color: _getRoleColor(role).withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(1.w),
+                    ),
+                    child: CustomIconWidget(
+                      iconName: _getRoleIcon(role),
+                      color: _getRoleColor(role),
+                      size: 4.w,
+                    ),
+                  ),
+                  SizedBox(width: 3.w),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          role,
+                          style: AppTheme.lightTheme.textTheme.labelLarge?.copyWith(
+                            fontWeight: FontWeight.w600,
+                            color: AppTheme.lightTheme.colorScheme.onSurface,
+                          ),
+                        ),
+                        Text(
+                          description,
+                          style: AppTheme.lightTheme.textTheme.bodySmall?.copyWith(
+                            color: AppTheme.lightTheme.colorScheme.onSurface
+                                .withValues(alpha: 0.6),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  CustomIconWidget(
+                    iconName: 'arrow_forward_ios',
+                    color: AppTheme.lightTheme.colorScheme.primary.withValues(alpha: 0.6),
+                    size: 4.w,
+                  ),
+                ],
+              ),
+              SizedBox(height: 2.h),
+              Container(
+                width: double.infinity,
+                padding: EdgeInsets.all(2.w),
+                decoration: BoxDecoration(
+                  color: AppTheme.lightTheme.colorScheme.surface,
+                  borderRadius: BorderRadius.circular(1.w),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Text(
+                          'Email: ',
+                          style: AppTheme.lightTheme.textTheme.bodySmall?.copyWith(
+                            fontWeight: FontWeight.w500,
+                            color: AppTheme.lightTheme.colorScheme.onSurface
+                                .withValues(alpha: 0.7),
+                          ),
+                        ),
+                        Expanded(
+                          child: Text(
+                            email,
+                            style: AppTheme.lightTheme.textTheme.bodySmall?.copyWith(
+                              color: AppTheme.lightTheme.colorScheme.onSurface,
+                              fontFamily: 'monospace',
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
+                    ),
+                    SizedBox(height: 0.5.h),
+                    Row(
+                      children: [
+                        Text(
+                          'Password: ',
+                          style: AppTheme.lightTheme.textTheme.bodySmall?.copyWith(
+                            fontWeight: FontWeight.w500,
+                            color: AppTheme.lightTheme.colorScheme.onSurface
+                                .withValues(alpha: 0.7),
+                          ),
+                        ),
+                        Text(
+                          password,
+                          style: AppTheme.lightTheme.textTheme.bodySmall?.copyWith(
+                            color: AppTheme.lightTheme.colorScheme.onSurface,
+                            fontFamily: 'monospace',
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
                 ),
               ),
-            ),
-            Expanded(
-              flex: 4,
-              child: Text(
-                email,
-                style: AppTheme.lightTheme.textTheme.bodySmall?.copyWith(
-                  color: AppTheme.lightTheme.colorScheme.onSurface
-                      .withValues(alpha: 0.7),
-                ),
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-            Expanded(
-              flex: 2,
-              child: Text(
-                password,
-                style: AppTheme.lightTheme.textTheme.bodySmall?.copyWith(
-                  color: AppTheme.lightTheme.colorScheme.onSurface
-                      .withValues(alpha: 0.7),
-                  fontFamily: 'monospace',
-                ),
-              ),
-            ),
-            CustomIconWidget(
-              iconName: 'touch_app',
-              color: AppTheme.lightTheme.colorScheme.primary
-                  .withValues(alpha: 0.6),
-              size: 4.w,
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
